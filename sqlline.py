@@ -31,3 +31,29 @@ class Sqldb:
 
                 cursor.close()
             return True
+
+    def p_chanel(id):
+
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT uid FROM main WHERE uid = ?", (id,))
+        mem = cursor.fetchall()
+
+        for och in mem:
+            mem = re.sub(r"[(,)]","",str(mem))
+
+        if str(id) not in mem:
+            cursore.close()
+            return False
+        else:
+            cursor = conn.cursor()
+            cursor.execute('SELECT utgrup, ungrup FROM main WHERE uid = ?', (id,))
+            mem = cursor.fetchall()
+            cursor.close()
+
+            return mem[0]
+
+    def addchanel_sql(chanid, userid):
+
+        conn = sqlite3.connect('new.db')
+        cursor = conn.cursor()
