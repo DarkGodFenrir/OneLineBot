@@ -1,26 +1,17 @@
 # This Python file uses the following encoding: utf-8
 import telebot
 import param
+import asyncio
+from telethon_get import *
 from sqlline import *
 from keys import *
 
 from telethon.sync import TelegramClient
-from telethon import connection
-
-from datetime import date, datetime
-
-from telethon.tl.functions.channels import GetParticipantsRequest
-from telethon.tl.types import ChannelParticipantsSearch
+from telethon import connection, functions, types, sync
 
 
 bot = telebot.TeleBot(param.TOKEN)
 
-api_id   = param.API_ID
-api_hash = param.API_HASH
-username = param.USERNAME
-
-client = TelegramClient(username, api_id, api_hash)
-client.start()
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
@@ -43,7 +34,7 @@ def get_message(message):
 
         if prov[0] < prov[1]:
             bot.send_message(message.chat.id,"У вас сейчас %s из %s каналов,"
-            " чтобы добавить новый ведите ссылку на канал"%
+            " чтобы добавить новый ведите ссылку на канал:"%
             (prov[0],prov[1]))
             bot.register_next_step_handler(message, addchanel)
         else:
@@ -54,6 +45,11 @@ def get_message(message):
         bot.send_message(message.chat.id,"Неизвестная команда")
 
 def addchanel(message):
+    #Tele.get_last_news(message)
+    #loop.run_until_complete(asyncio.run(Tele.get_last_news(message)))
+    #asyncio.run(Tele.get_last_news(message))
+    asyncio.run(Tele.main(message))
+    #Tele.get_run(message)
     bot.send_message(message.chat.id,"Канал добавлен")
 
 bot.polling()
