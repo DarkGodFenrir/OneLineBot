@@ -26,7 +26,7 @@ class DateTimeEncoder(json.JSONEncoder):
 
 class Tele:
 
-    async def get_last_news(message):
+    async def get_last_news(message, client):
         channel = message.text
 
         offset_msg = 0    # номер записи, с которой начинается считывание
@@ -63,17 +63,18 @@ class Tele:
             if total_count_limit != 0 and total_messages >= total_count_limit:
                 break
 
-            with open('channel_messages.json', 'w', encoding='utf8') as outfile:
-                json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
+        with open('channel_messages.json', 'w', encoding='utf8') as outfile:
+            json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
+
+        print('Точка остановы 2')
 
     async def main(message):
-        client = await TelegramClient(username,
+        client = TelegramClient(username,
         api_id,
         api_hash)
-        client.connect()
-
-        await Tele.get_last_news(message)
-
+        await client.start()
+        await Tele.get_last_news(message, client)
+        #Tele.get_last_news(message)
 
 
 
