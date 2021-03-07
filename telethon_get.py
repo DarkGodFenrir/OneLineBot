@@ -3,6 +3,7 @@ from telethon import connection, functions, types, sync
 import param
 import json
 import asyncio
+from sqlline import *
 
 
 from datetime import date, datetime
@@ -27,16 +28,62 @@ class DateTimeEncoder(json.JSONEncoder):
 class Tele:
 
     async def get_last_news(message, client):
+
         channel = message.text
 
         offset_msg = 0    # номер записи, с которой начинается считывание
-        limit_msg = 100   # максимальное число записей, передаваемых за один раз
+        limit_msg = 1   # максимальное число записей, передаваемых за один раз
 
         all_messages = []   # список всех сообщений
         total_messages = 0
         total_count_limit = 1  # поменяйте это значение, если вам нужны не все сообщения
 
-        print('Точка остановы 1')
+        while True:
+            history = await client(GetHistoryRequest(
+            peer = channel,
+            offset_id=offset_msg,
+            offset_date=None,
+            add_offset=0,
+            limit=limit_msg,
+            max_id=0,
+            min_id=0,
+            hash=0
+            ))
+
+            if not history.messages:
+                break
+
+            print(history)
+
+            messages = history.messages
+
+            for message in messages:
+                all_messages.append(message.to_dict())
+
+            offset_msg = messages[len(messages) - 1].id
+            total_messages = len(all_messages)
+            print(messages[len(messages) - 1].id)
+
+            if total_count_limit != 0 and total_messages >= total_count_limit:
+                break
+
+        #with open('channel_messages.json', 'w', encoding='utf8') as outfile:
+        #    json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
+
+    async def get_for_reg_grup(message, client):
+
+        channel = message.text
+
+        offset_msg = 0    # номер записи, с которой начинается считывание
+        limit_msg = 100  # максимальное число записей, передаваемых за один раз
+
+        all_messages = []   # список всех сообщений
+        total_messages = 0
+        total_count_limit = 0 # поменяйте это значение, если вам нужны не все сообщения
+
+        messages = []
+        chats = []
+
         while True:
             history = await client(GetHistoryRequest(
             peer = channel,
@@ -53,6 +100,7 @@ class Tele:
                 break
 
             messages = history.messages
+            chats = history.chats
 
             for message in messages:
                 all_messages.append(message.to_dict())
@@ -63,10 +111,15 @@ class Tele:
             if total_count_limit != 0 and total_messages >= total_count_limit:
                 break
 
-        with open('channel_messages.json', 'w', encoding='utf8') as outfile:
-            json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
+        #print(messages[0].id)
+        #print(chats[0].id)
+        #print(chats[0].title)
+        #print(chats[0].username)
 
-        print('Точка остановы 2')
+        grup = {'id':chats[0].id,'title':chats[0].title,'username':chats[0].username,'last':messages[0].id}
+        print(grup)
+
+
 
     async def main(message):
         client = TelegramClient(username,
@@ -75,6 +128,14 @@ class Tele:
         await client.start()
         await Tele.get_last_news(message, client)
         #Tele.get_last_news(message)
+
+    async def reg_grup(message):
+        client = TelegramClient(username,
+        api_id,
+        api_hash)
+        await client.start()
+        await Tele.get_for_reg_grup(message, client)
+
 
 
 

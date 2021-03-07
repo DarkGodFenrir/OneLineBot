@@ -48,7 +48,7 @@ def addchanel(message):
     #Tele.get_last_news(message)
     #loop.run_until_complete(asyncio.run(Tele.get_last_news(message)))
     #asyncio.run(Tele.get_last_news(message))
-    asyncio.run(Tele.main(message))
+    asyncio.run(Tele.reg_grup(message))
     #Tele.get_run(message)
     bot.send_message(message.chat.id,"Канал добавлен")
 
