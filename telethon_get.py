@@ -32,11 +32,11 @@ class Tele:
         channel = message.text
 
         offset_msg = 0    # номер записи, с которой начинается считывание
-        limit_msg = 1   # максимальное число записей, передаваемых за один раз
+        limit_msg = 100   # максимальное число записей, передаваемых за один раз
 
         all_messages = []   # список всех сообщений
         total_messages = 0
-        total_count_limit = 1  # поменяйте это значение, если вам нужны не все сообщения
+        total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
 
         while True:
             history = await client(GetHistoryRequest(
@@ -75,11 +75,11 @@ class Tele:
         channel = message.text
 
         offset_msg = 0    # номер записи, с которой начинается считывание
-        limit_msg = 100  # максимальное число записей, передаваемых за один раз
+        limit_msg = 1  # максимальное число записей, передаваемых за один раз
 
         all_messages = []   # список всех сообщений
         total_messages = 0
-        total_count_limit = 0 # поменяйте это значение, если вам нужны не все сообщения
+        total_count_limit = 1 # поменяйте это значение, если вам нужны не все сообщения
 
         messages = []
         chats = []
@@ -102,8 +102,8 @@ class Tele:
             messages = history.messages
             chats = history.chats
 
-            for message in messages:
-                all_messages.append(message.to_dict())
+            for messages_in in messages:
+                all_messages.append(messages_in.to_dict())
 
             offset_msg = messages[len(messages) - 1].id
             total_messages = len(all_messages)
@@ -111,13 +111,19 @@ class Tele:
             if total_count_limit != 0 and total_messages >= total_count_limit:
                 break
 
-        #print(messages[0].id)
-        #print(chats[0].id)
-        #print(chats[0].title)
-        #print(chats[0].username)
+        grup = {'id':chats[0].id,'title':chats[0].title,
+        'username':chats[0].username,'last':messages[0].id,
+        'u_id':message.from_user.id,'u_username':message.from_user.username}
 
-        grup = {'id':chats[0].id,'title':chats[0].title,'username':chats[0].username,'last':messages[0].id}
-        print(grup)
+        add_q_sql = Sqldb.add_new_grup(grup)
+
+        if add_q_sql is True:
+            return True
+        else:
+            return False
+
+
+
 
 
 
@@ -127,14 +133,17 @@ class Tele:
         api_hash)
         await client.start()
         await Tele.get_last_news(message, client)
-        #Tele.get_last_news(message)
+        await client.disconnect()
 
     async def reg_grup(message):
         client = TelegramClient(username,
         api_id,
         api_hash)
         await client.start()
-        await Tele.get_for_reg_grup(message, client)
+        result = await Tele.get_for_reg_grup(message, client)
+        await client.disconnect()
+
+        return result
 
 
 

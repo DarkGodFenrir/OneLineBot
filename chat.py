@@ -45,11 +45,13 @@ def get_message(message):
         bot.send_message(message.chat.id,"Неизвестная команда")
 
 def addchanel(message):
-    #Tele.get_last_news(message)
-    #loop.run_until_complete(asyncio.run(Tele.get_last_news(message)))
-    #asyncio.run(Tele.get_last_news(message))
-    asyncio.run(Tele.reg_grup(message))
-    #Tele.get_run(message)
-    bot.send_message(message.chat.id,"Канал добавлен")
+
+    result = asyncio.run(Tele.reg_grup(message))
+
+    if result is True:
+        bot.send_message(message.chat.id,"Канал добавлен")
+        if Sqldb.grup_plus(message.chat.id) is True: print("Привлюсовал")
+    else:
+        bot.send_message(message.chat.id,"Канал уже добавлен в ваш список")
 
 bot.polling()
