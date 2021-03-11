@@ -2,6 +2,33 @@ import sqlite3
 import re
 
 class Sqldb:
+    def get_max_grup():
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT seq FROM sqlite_sequence WHERE name = ?",('grup',))
+        prow = cursor.fetchall()
+        prow = Sqldb.och(prow[0])
+        prow = Sqldb.ochstr(prow)
+        cursor.close()
+        return prow
+
+    def get_param(id):
+
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        znach = []
+        peremen = ['g_username','g_users', 'g_last']
+        for i in peremen:
+            zapros = "SELECT " + i + " FROM grup WHERE id = ?"
+            cursor.execute(zapros,(id,))
+            znach.append(cursor.fetchall())
+        for i in range(len(znach)):
+            znach[i] = Sqldb.ochstr(znach[i])
+
+        get = {'title': znach[0], 'last_news': znach[2], 'users': znach[1].split()}
+        # prow = Sqldb.och(prow)
+        cursor.close()
+        return get
 
     def r_users(user_f):
 
@@ -132,11 +159,9 @@ class Sqldb:
         cursor = conn.cursor()
         cursor.execute("SELECT utgrup FROM main WHERE uid = ?", (id,))
         prow = cursor.fetchall()
-        print(prow)
         prow = Sqldb.och(prow[0])
-        print(prow)
         prow = Sqldb.ochstr(prow)
-        print(prow)
+
 
         with conn:
             cursor.execute('UPDATE main SET utgrup =? WHERE uid = ?',(int(prow)+1,id,))

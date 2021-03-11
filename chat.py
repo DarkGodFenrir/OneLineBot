@@ -2,6 +2,9 @@
 import telebot
 import param
 import asyncio
+import schedule
+import time
+from threading import Thread
 from telethon_get import *
 from sqlline import *
 from keys import *
@@ -9,8 +12,22 @@ from keys import *
 from telethon.sync import TelegramClient
 from telethon import connection, functions, types, sync
 
-
 bot = telebot.TeleBot(param.TOKEN)
+
+def send_message():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+def function_to_run():
+    max_grup = Sqldb.get_max_grup()
+    for i in range(int(max_grup) + 1):
+        print(str(i) + ' = i')
+        param_g = Sqldb.get_param(i)
+        if param_g['title'] is not None:
+            messages = asyncio.run(Tele.main(param_g))
+
+    #return bot.send_message(param.AUTHOR_ID,"прошло 10 секунд")
 
 
 @bot.message_handler(commands=['start'])
@@ -50,8 +67,13 @@ def addchanel(message):
 
     if result is True:
         bot.send_message(message.chat.id,"Канал добавлен")
-        if Sqldb.grup_plus(message.chat.id) is True: print("Привлюсовал")
+        if Sqldb.grup_plus(message.chat.id) is True:
+            print("Привлюсовал")
     else:
         bot.send_message(message.chat.id,"Канал уже добавлен в ваш список")
 
-bot.polling()
+if __name__ == "__main__":
+    schedule.every(5).seconds.do(function_to_run)
+    #schedule.every(1).minutes.do(function_to_run)
+    Thread(target=send_message).start()
+    bot.polling()

@@ -27,13 +27,14 @@ class DateTimeEncoder(json.JSONEncoder):
 
 class Tele:
 
-    async def get_last_news(message, client):
-
-        channel = message.text
+    async def get_last_news(param, client):
+        print(param)
+        channel = '@' + str(param['title'])
 
         offset_msg = 0    # номер записи, с которой начинается считывание
         limit_msg = 100   # максимальное число записей, передаваемых за один раз
 
+        last_id = param['last_news']
         all_messages = []   # список всех сообщений
         total_messages = 0
         total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
@@ -62,10 +63,13 @@ class Tele:
 
             offset_msg = messages[len(messages) - 1].id
             total_messages = len(all_messages)
-            print(messages[len(messages) - 1].id)
 
             if total_count_limit != 0 and total_messages >= total_count_limit:
                 break
+
+        print(messages[len(messages) - 1].id)
+        return all_messages
+
 
         #with open('channel_messages.json', 'w', encoding='utf8') as outfile:
         #    json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
@@ -127,13 +131,14 @@ class Tele:
 
 
 
-    async def main(message):
+    async def main(param):
         client = TelegramClient(username,
         api_id,
         api_hash)
         await client.start()
-        await Tele.get_last_news(message, client)
+        messages = await Tele.get_last_news(param, client)
         await client.disconnect()
+        return messages
 
     async def reg_grup(message):
         client = TelegramClient(username,
