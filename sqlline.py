@@ -12,6 +12,13 @@ class Sqldb:
         cursor.close()
         return prow
 
+    def edit_number(l_id,param):
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        with conn:
+            cursor.execute('UPDATE grup SET g_last = ? WHERE g_username = ?',(l_id, str(param['title']),))
+        cursor.close()
+
     def get_param(id):
 
         conn = sqlite3.connect('news.db')

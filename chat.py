@@ -22,11 +22,21 @@ def send_message():
 def function_to_run():
     max_grup = Sqldb.get_max_grup()
     for i in range(int(max_grup) + 1):
-        print(str(i) + ' = i')
         param_g = Sqldb.get_param(i)
-        if param_g['title'] is not None:
+        messages = []
+        if len(param_g['title']) > 0:
             messages = asyncio.run(Tele.main(param_g))
-
+        for mess in messages:
+            media = mess['media']
+            for user in param_g['users']:
+                if media != None:
+                    photo = media['webpage']
+                    bot.send_photo(user,str(photo['url']),
+                    caption = str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
+                    # bot.send_mes(param.AUTHOR_ID, disable_web_page_preview= 'false',
+                    # text='<a href= ' + str(photo['url'] + '> </a>' + str(mess['message'])),parse_mode= "HTML")
+                else:
+                    bot.send_message(user, text=str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
     #return bot.send_message(param.AUTHOR_ID,"прошло 10 секунд")
 
 
@@ -65,12 +75,16 @@ def addchanel(message):
 
     result = asyncio.run(Tele.reg_grup(message))
 
-    if result is True:
+    if result == 1:
         bot.send_message(message.chat.id,"Канал добавлен")
         if Sqldb.grup_plus(message.chat.id) is True:
             print("Привлюсовал")
-    else:
+    elif result == 2:
         bot.send_message(message.chat.id,"Канал уже добавлен в ваш список")
+    elif result == 3:
+        bot.send_message(message.chat.id,"Бот не может получать посты этой группы")
+    else:
+        bot.send_message(message.chat.id,"Произошла неизвестная ошибка, группа не добавлена")
 
 if __name__ == "__main__":
     schedule.every(5).seconds.do(function_to_run)

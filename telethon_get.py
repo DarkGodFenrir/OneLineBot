@@ -28,13 +28,13 @@ class DateTimeEncoder(json.JSONEncoder):
 class Tele:
 
     async def get_last_news(param, client):
-        print(param)
         channel = '@' + str(param['title'])
 
         offset_msg = 0    # номер записи, с которой начинается считывание
         limit_msg = 100   # максимальное число записей, передаваемых за один раз
+        messages = []
 
-        last_id = param['last_news']
+        last_id = int(param['last_news'])
         all_messages = []   # список всех сообщений
         total_messages = 0
         total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
@@ -47,14 +47,12 @@ class Tele:
             add_offset=0,
             limit=limit_msg,
             max_id=0,
-            min_id=0,
+            min_id=last_id,
             hash=0
             ))
 
             if not history.messages:
                 break
-
-            print(history)
 
             messages = history.messages
 
@@ -67,7 +65,8 @@ class Tele:
             if total_count_limit != 0 and total_messages >= total_count_limit:
                 break
 
-        print(messages[len(messages) - 1].id)
+        if len(messages) > 0:
+            Sqldb.edit_number(messages[0].id, param)
         return all_messages
 
 
@@ -75,61 +74,58 @@ class Tele:
         #    json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
 
     async def get_for_reg_grup(message, client):
+        try:
+            channel = message.text
 
-        channel = message.text
+            offset_msg = 0    # номер записи, с которой начинается считывание
+            limit_msg = 1  # максимальное число записей, передаваемых за один раз
 
-        offset_msg = 0    # номер записи, с которой начинается считывание
-        limit_msg = 1  # максимальное число записей, передаваемых за один раз
+            all_messages = []   # список всех сообщений
+            total_messages = 0
+            total_count_limit = 1 # поменяйте это значение, если вам нужны не все сообщения
 
-        all_messages = []   # список всех сообщений
-        total_messages = 0
-        total_count_limit = 1 # поменяйте это значение, если вам нужны не все сообщения
+            messages = []
+            chats = []
 
-        messages = []
-        chats = []
+            while True:
+                history = await client(GetHistoryRequest(
+                peer = channel,
+                offset_id=offset_msg,
+                offset_date=None,
+                add_offset=0,
+                limit=limit_msg,
+                max_id=0,
+                min_id=0,
+                hash=0
+                ))
 
-        while True:
-            history = await client(GetHistoryRequest(
-            peer = channel,
-            offset_id=offset_msg,
-            offset_date=None,
-            add_offset=0,
-            limit=limit_msg,
-            max_id=0,
-            min_id=0,
-            hash=0
-            ))
+                if not history.messages:
+                    break
 
-            if not history.messages:
-                break
+                messages = history.messages
+                chats = history.chats
 
-            messages = history.messages
-            chats = history.chats
+                for messages_in in messages:
+                    all_messages.append(messages_in.to_dict())
 
-            for messages_in in messages:
-                all_messages.append(messages_in.to_dict())
+                offset_msg = messages[len(messages) - 1].id
+                total_messages = len(all_messages)
 
-            offset_msg = messages[len(messages) - 1].id
-            total_messages = len(all_messages)
+                if total_count_limit != 0 and total_messages >= total_count_limit:
+                    break
 
-            if total_count_limit != 0 and total_messages >= total_count_limit:
-                break
+            grup = {'id':chats[0].id,'title':chats[0].title,
+            'username':chats[0].username,'last':messages[0].id,
+            'u_id':message.from_user.id,'u_username':message.from_user.username}
 
-        grup = {'id':chats[0].id,'title':chats[0].title,
-        'username':chats[0].username,'last':messages[0].id,
-        'u_id':message.from_user.id,'u_username':message.from_user.username}
+            add_q_sql = Sqldb.add_new_grup(grup)
 
-        add_q_sql = Sqldb.add_new_grup(grup)
-
-        if add_q_sql is True:
-            return True
-        else:
-            return False
-
-
-
-
-
+            if add_q_sql is True:
+                return 1
+            else:
+                return 2
+        except:
+            return 3
 
     async def main(param):
         client = TelegramClient(username,
