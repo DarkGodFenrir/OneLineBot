@@ -112,7 +112,6 @@ class Sqldb:
                     prow = (prow + " " + str(grup['id']))
                     if prow is None:
                         prow = grup['id']
-                    print(str(grup['id']) + ";;" + str(prow))
                     # prow = prow + " " + grup["u_id"]
                     prow = Sqldb.ochstr(str(prow))
                     cursor.execute('UPDATE main SET ugroup = ? WHERE uid = ?',(prow,grup['u_id'],))

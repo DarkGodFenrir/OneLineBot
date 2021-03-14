@@ -34,7 +34,7 @@ class Tele:
         limit_msg = 100   # максимальное число записей, передаваемых за один раз
         messages = []
 
-        last_id = int(param['last_news'])
+        last_id = int(param['last_news']) - 1
         all_messages = []   # список всех сообщений
         total_messages = 0
         total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
@@ -55,6 +55,7 @@ class Tele:
                 break
 
             messages = history.messages
+            print('=============' + str(history) + '=========')
 
             for message in messages:
                 all_messages.append(message.to_dict())

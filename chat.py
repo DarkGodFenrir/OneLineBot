@@ -4,6 +4,9 @@ import param
 import asyncio
 import schedule
 import time
+import io
+from PIL import Image
+from io import BytesIO
 from threading import Thread
 from telethon_get import *
 from sqlline import *
@@ -27,15 +30,31 @@ def function_to_run():
         if len(param_g['title']) > 0:
             messages = asyncio.run(Tele.main(param_g))
         for mess in messages:
+            print(mess)
             media = mess['media']
-            for user in param_g['users']:
-                if media != None:
+            if media != None:
+                if media['_'] == 'MessageMediaWebPage':
                     photo = media['webpage']
-                    bot.send_photo(user,str(photo['url']),
-                    caption = str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
+                    for user in param_g['users']:
+                        bot.send_photo(user,str(photo['url']),
+                        caption = str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
                     # bot.send_mes(param.AUTHOR_ID, disable_web_page_preview= 'false',
                     # text='<a href= ' + str(photo['url'] + '> </a>' + str(mess['message'])),parse_mode= "HTML")
+                elif media['_'] == 'MessageMediaPhoto':
+                    photo = media['photo']
+                    photo = photo['file_reference']
+                    for user in param_g['users']:
+                        bot.send_photo(user, photo = photo,
+                        caption = str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
+                elif media['_'] == 'MessageMediaDocument':
+                    document= media['document']
+                    for user in param_g['users']:
+                        bot.send_file(user,document['id'],
+                        caption = str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
                 else:
+                    print(media['_'])
+            else:
+                for user in param_g['users']:
                     bot.send_message(user, text=str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
     #return bot.send_message(param.AUTHOR_ID,"прошло 10 секунд")
 
@@ -69,16 +88,15 @@ def get_message(message):
             bot.send_message(message.chat.id,"У вас сайчас максимальное"
             " количество каналов", reply_markup = key)
     else:
-        bot.send_message(message.chat.id,"Неизвестная команда")
+        bot.send_message(message.chat.id,"Команда неизвестна или находится в разработке")
 
 def addchanel(message):
 
     result = asyncio.run(Tele.reg_grup(message))
 
     if result == 1:
-        bot.send_message(message.chat.id,"Канал добавлен")
-        if Sqldb.grup_plus(message.chat.id) is True:
-            print("Привлюсовал")
+        Sqldb.grup_plus(message.chat.id)
+        bot.send_message(message.chat.id,"Канал добавлен, ждите новых постов")
     elif result == 2:
         bot.send_message(message.chat.id,"Канал уже добавлен в ваш список")
     elif result == 3:
@@ -87,7 +105,7 @@ def addchanel(message):
         bot.send_message(message.chat.id,"Произошла неизвестная ошибка, группа не добавлена")
 
 if __name__ == "__main__":
-    schedule.every(5).seconds.do(function_to_run)
-    #schedule.every(1).minutes.do(function_to_run)
+    schedule.every(15).seconds.do(function_to_run)
+    # schedule.every(1).minutes.do(function_to_run)
     Thread(target=send_message).start()
     bot.polling()
