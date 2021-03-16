@@ -29,33 +29,58 @@ def function_to_run():
         messages = []
         if len(param_g['title']) > 0:
             messages = asyncio.run(Tele.main(param_g))
+
         for mess in messages:
-            print(mess)
-            media = mess['media']
-            if media != None:
-                if media['_'] == 'MessageMediaWebPage':
-                    photo = media['webpage']
+            global group_id
+            if mess['grouped_id'] != None and mess['grouped_id'] != str(group_id):
+
+                linkgrup_m = "https://t.me/" + str(param_g['title']) +"/" + str(mess['id'])
+                linkgrup = "https://t.me/" + str(param_g['title']) +"/"
+                media = mess['media']
+                if media != None:
                     for user in param_g['users']:
-                        bot.send_photo(user,str(photo['url']),
-                        caption = str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
-                    # bot.send_mes(param.AUTHOR_ID, disable_web_page_preview= 'false',
-                    # text='<a href= ' + str(photo['url'] + '> </a>' + str(mess['message'])),parse_mode= "HTML")
-                elif media['_'] == 'MessageMediaPhoto':
-                    photo = media['photo']
-                    photo = photo['file_reference']
-                    for user in param_g['users']:
-                        bot.send_photo(user, photo = photo,
-                        caption = str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
-                elif media['_'] == 'MessageMediaDocument':
-                    document= media['document']
-                    for user in param_g['users']:
-                        bot.send_file(user,document['id'],
-                        caption = str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
+                        if media['_'] == 'MessageMediaWebPage':
+                            url = media['webpage']
+                            url = url['url']
+                            sock = '<a href = "' + str(url) + '">' + '|' + "</a>"
+                            sock = str(sock) + '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
+                            mtext = str(sock) + '\n\n'+ str(mess['message'])
+                            bot.send_message(user, mtext, parse_mode='HTML')
+                        else:
+                            for user in param_g['users']:
+                                sock = '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
+                                mtext = str(sock) + '\n\n'+ str(mess['message'])
+                                bot.send_message(user, mtext, parse_mode='HTML')
+
                 else:
-                    print(media['_'])
+                    for user in param_g['users']:
+                        sock = '<a href = "'+ str(linkgrup) +'">' + str(param_g["nazv"]) + "</a>"
+                        bot.send_message(user,str(sock) + "\n\n" +str(mess['message']),
+                        parse_mode='HTML', disable_web_page_preview=True)
             else:
-                for user in param_g['users']:
-                    bot.send_message(user, text=str(mess['message']) + "\n\nИсточник: @" + str(param_g['title']))
+                linkgrup_m = "https://t.me/" + str(param_g['title']) +"/" + str(mess['id'])
+                linkgrup = "https://t.me/" + str(param_g['title']) +"/"
+                media = mess['media']
+                if media != None:
+                    for user in param_g['users']:
+                        if media['_'] == 'MessageMediaWebPage':
+                            url = media['webpage']
+                            url = url['url']
+                            sock = '<a href = "' + str(url) + '">' + '|' + "</a>"
+                            sock = str(sock) + '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
+                            mtext = str(sock) + '\n\n'+ str(mess['message'])
+                            bot.send_message(user, mtext, parse_mode='HTML')
+                        else:
+                            for user in param_g['users']:
+                                sock = '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
+                                mtext = str(sock) + '\n\n'+ str(mess['message'])
+                                bot.send_message(user, mtext, parse_mode='HTML')
+                else:
+                    for user in param_g['users']:
+                        sock = '<a href = "'+ str(linkgrup) +'">' + str(param_g["nazv"]) + "</a>"
+                        bot.send_message(user,str(sock) + "\n\n" +str(mess['message']),
+                        parse_mode='HTML', disable_web_page_preview=True)
+            group_id = mess['grouped_id']
     #return bot.send_message(param.AUTHOR_ID,"прошло 10 секунд")
 
 
@@ -105,7 +130,9 @@ def addchanel(message):
         bot.send_message(message.chat.id,"Произошла неизвестная ошибка, группа не добавлена")
 
 if __name__ == "__main__":
-    schedule.every(15).seconds.do(function_to_run)
-    # schedule.every(1).minutes.do(function_to_run)
+    global group_id
+    group_id = None
+    #schedule.every(15).seconds.do(function_to_run)
+    schedule.every(1).minutes.do(function_to_run)
     Thread(target=send_message).start()
     bot.polling()

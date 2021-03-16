@@ -24,15 +24,16 @@ class Sqldb:
         conn = sqlite3.connect('news.db')
         cursor = conn.cursor()
         znach = []
-        peremen = ['g_username','g_users', 'g_last']
+        peremen = ['g_username','g_users', 'g_last', 'g_title']
         for i in peremen:
             zapros = "SELECT " + i + " FROM grup WHERE id = ?"
             cursor.execute(zapros,(id,))
             znach.append(cursor.fetchall())
         for i in range(len(znach)):
             znach[i] = Sqldb.ochstr(znach[i])
-
-        get = {'title': znach[0], 'last_news': znach[2], 'users': znach[1].split()}
+        print(znach)
+        get = {'title': znach[0], 'last_news': znach[2], 'users': znach[1].split(),
+        'nazv': znach[3]}
         # prow = Sqldb.och(prow)
         cursor.close()
         return get

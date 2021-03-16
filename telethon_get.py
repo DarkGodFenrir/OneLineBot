@@ -34,7 +34,7 @@ class Tele:
         limit_msg = 100   # максимальное число записей, передаваемых за один раз
         messages = []
 
-        last_id = int(param['last_news']) - 1
+        last_id = int(param['last_news'])
         all_messages = []   # список всех сообщений
         total_messages = 0
         total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
@@ -55,7 +55,6 @@ class Tele:
                 break
 
             messages = history.messages
-            print('=============' + str(history) + '=========')
 
             for message in messages:
                 all_messages.append(message.to_dict())
@@ -68,7 +67,11 @@ class Tele:
 
         if len(messages) > 0:
             Sqldb.edit_number(messages[0].id, param)
-        return all_messages
+
+        per_messages = []
+        for i in range(len(all_messages)):
+            per_messages.append(all_messages[(len(all_messages)-1)-i])
+        return per_messages
 
 
         #with open('channel_messages.json', 'w', encoding='utf8') as outfile:
