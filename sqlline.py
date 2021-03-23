@@ -31,9 +31,36 @@ class Sqldb:
             znach.append(cursor.fetchall())
         for i in range(len(znach)):
             znach[i] = Sqldb.ochstr(znach[i])
-        print(znach)
         get = {'title': znach[0], 'last_news': znach[2], 'users': znach[1].split(),
         'nazv': znach[3]}
+        # prow = Sqldb.och(prow)
+        cursor.close()
+        return get
+
+    def get_grup_param(id):
+        per = False
+        if (str(id).find("_p") > -1):
+            id = re.sub("[_p]","",id)
+            per = True
+
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        znach = []
+        peremen = ['g_username','g_id', 'g_title']
+        for i in peremen:
+            zapros = "SELECT " + i + " FROM grup WHERE g_id = ?"
+            cursor.execute(zapros,(id,))
+            znach.append(cursor.fetchall())
+        for i in range(len(znach)):
+            znach[i] = Sqldb.ochstr(znach[i])
+
+        get = {
+        'title': znach[0],
+        'g_id': znach[1],
+        'nazv': znach[2]}
+        if per:
+            get['g_id'] = str(get['g_id']) + "_p"
+        print(get)
         # prow = Sqldb.och(prow)
         cursor.close()
         return get
@@ -161,6 +188,93 @@ class Sqldb:
                     cursor.close()
                     return False
 
+    def edit_list(param):
+        conn = sqlite3.connect('news.db')
+        for_r = 3
+        cursor = conn.cursor()
+        cursor.execute("SELECT ugroup FROM main WHERE uid = ?", (param[2],))
+        prow = cursor.fetchall()
+        prow = Sqldb.all_och(prow)
+        prow = prow.split()
+        if str(param[0]) == "del":
+            if param[1] in prow:
+                prow.remove(param[1])
+                cursor.execute("SELECT g_users FROM grup WHERE g_id = ?", (param[1],))
+                grup_u = cursor.fetchall()
+                grup_u = Sqldb.all_och(grup_u)
+                grup_u = grup_u.split()
+                if param[2] in grup_u :
+                    grup_u.remove(param[2])
+
+                cursor.execute("SELECT utgrup FROM main WHERE uid = ?", (param[2],))
+                min_grup = cursor.fetchall()
+                min_grup = Sqldb.all_och(min_grup)
+                min_grup = int(min_grup) - 1
+                prow = Sqldb.all_och(prow)
+                grup_u = Sqldb.all_och(grup_u)
+                with conn:
+                    cursor = conn.cursor()
+                    cursor.execute('UPDATE main SET ugroup = ?, utgrup = ? WHERE uid = ?',(prow, min_grup, param[2],))
+                    cursor.execute('UPDATE grup SET g_users = ? WHERE g_id = ?',(grup_u,param[1],))
+                    for_r = 0
+                    cursor.close()
+            elif str(param[1] + "_p") in prow:
+                prow.remove(str(param[1]+"_p"))
+                cursor.execute("SELECT g_users FROM grup WHERE g_id = ?", (param[1],))
+                grup_u = cursor.fetchall()
+                grup_u = Sqldb.all_och(grup_u)
+                grup_u = grup_u.split()
+                if param[2] in grup_u :
+                    grup_u.remove(param[2])
+
+                cursor.execute("SELECT utgrup FROM main WHERE uid = ?", (param[2],))
+                min_grup = cursor.fetchall()
+                min_grup = Sqldb.all_och(min_grup)
+                min_grup = int(min_grup) - 1
+                prow = Sqldb.all_och(prow)
+                grup_u = Sqldb.all_och(grup_u)
+                with conn:
+                    cursor = conn.cursor()
+                    cursor.execute('UPDATE main SET ugroup = ?, utgrup = ? WHERE uid = ?',(prow, min_grup, param[2],))
+                    cursor.execute('UPDATE grup SET g_users = ? WHERE g_id = ?',(grup_u,param[1],))
+                    for_r = 0
+                    cursor.close()
+        elif str(param[0]) == "pau":
+            for i in range(len(prow)):
+                if str(prow[i]) == str(param[1]):
+                    prow[i] = str(prow[i]) + "_p"
+
+            print(prow)
+            cursor.execute("SELECT g_users FROM grup WHERE g_id = ?", (param[1],))
+            grup_u = cursor.fetchall()
+            grup_u = Sqldb.all_och(grup_u)
+            grup_u = grup_u.split()
+            if param[2] in grup_u:
+                grup_u.remove(param[2])
+            prow = Sqldb.all_och(prow)
+            grup_u = Sqldb.all_och(grup_u)
+            print(prow)
+            print(grup_u)
+            with conn:
+                cursor = conn.cursor()
+                cursor.execute('UPDATE main SET ugroup = ? WHERE uid = ?',(prow, param[2],))
+                cursor.execute('UPDATE grup SET g_users = ? WHERE g_id = ?',(grup_u,param[1],))
+                for_r = 1
+                cursor.close()
+        return for_r
+
+
+    def get_grup(id):
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT ugroup FROM main WHERE uid = ?", (id,))
+        prow = cursor.fetchall()
+        prow = Sqldb.och(prow[0])
+        prow = Sqldb.ochstr(prow)
+        cursor.close()
+        return prow
+
+
     def grup_plus(id):
         conn = sqlite3.connect('news.db')
         cursor = conn.cursor()
@@ -168,8 +282,6 @@ class Sqldb:
         prow = cursor.fetchall()
         prow = Sqldb.och(prow[0])
         prow = Sqldb.ochstr(prow)
-
-
         with conn:
             cursor.execute('UPDATE main SET utgrup =? WHERE uid = ?',(int(prow)+1,id,))
         cursor.close()
@@ -182,6 +294,13 @@ class Sqldb:
         if not prow:
             prow = []
         return prow
+
+    def all_och(par):
+        if len(par) == 1:
+            par = Sqldb.och(par[0])
+        par = Sqldb.ochstr(par)
+        return par
+
 
     def ochstr(prow):
         prow = re.sub(r"[\[\](,)']","",str(prow))
