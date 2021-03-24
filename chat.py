@@ -145,7 +145,6 @@ def get_message(message):
         t.join()
         global exit
         exit = False
-        sys.exit()
     else:
         bot.send_message(message.chat.id,"Команда неизвестна или находится в разработке")
 
@@ -182,6 +181,18 @@ def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
     rez = Sqldb.edit_list(info)
     if rez == 1:
         bot.send_message(callback_query.from_user.id, "Канал успешно поставлен на паузу")
+    else:
+        print("Ошибка изменения листа")
+    bot.answer_callback_query(callback_query.id)
+
+@bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('beg_'))
+def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
+    # code = callback_query.data[-1]
+    info = re.split("[_]", str(callback_query.data))
+    print(info)
+    rez = Sqldb.edit_list(info)
+    if rez == 2:
+        bot.send_message(callback_query.from_user.id, "Канал успешно запущен")
     else:
         print("Ошибка изменения листа")
     bot.answer_callback_query(callback_query.id)
