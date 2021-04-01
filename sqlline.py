@@ -37,6 +37,24 @@ class Sqldb:
         cursor.close()
         return get
 
+    def get_us_param(id):
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        znach = []
+        peremen = ['refers','balans']
+        for i in peremen:
+            zapros = "SELECT " + i + " FROM main WHERE uid = ?"
+            cursor.execute(zapros,(id,))
+            znach.append(cursor.fetchall())
+        for i in range(len(znach)):
+            znach[i] = Sqldb.ochstr(znach[i])
+        get = {
+        'refers': znach[0],
+        'balans': znach[1]}
+        # prow = Sqldb.och(prow)
+        cursor.close()
+        return get
+
     def get_grup_param(id):
         per = False
         if (str(id).find("_p") > -1):
@@ -60,7 +78,6 @@ class Sqldb:
         'nazv': znach[2]}
         if per:
             get['g_id'] = str(get['g_id']) + "_p"
-        print(get)
         # prow = Sqldb.och(prow)
         cursor.close()
         return get
@@ -288,6 +305,30 @@ class Sqldb:
 
         return for_r
 
+    def add_ref(inviter):
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT refers FROM main WHERE uid = ?',(inviter,))
+        inv = cursor.fetchall()
+        inv = int(Sqldb.all_och(inv))
+        inv += 1
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE main SET refers = ? WHERE uid = ?',(inv, inviter,))
+        if inv%2 == 0 and inv != 0:
+            with conn:
+                cursor.execute('SELECT ungrup FROM main WHERE uid = ?',(inviter,))
+                grup = cursor.fetchall()
+                grup = int(Sqldb.all_och(grup))
+                grup += 1
+                cursor = conn.cursor()
+                cursor.execute('UPDATE main SET ungrup = ? WHERE uid = ?',(grup, inviter,))
+            cursor.close()
+            return True
+        else:
+            cursor.close()
+            return False
+
 
     def get_grup(id):
         conn = sqlite3.connect('news.db')
@@ -299,6 +340,14 @@ class Sqldb:
         cursor.close()
         return prow
 
+    def get_user():
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT uid FROM main WHERE akt = 1")
+        prow = cursor.fetchall()
+        prow = Sqldb.all_och(prow[0])
+        cursor.close()
+        return prow
 
     def grup_plus(id):
         conn = sqlite3.connect('news.db')

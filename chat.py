@@ -30,77 +30,79 @@ def function_to_run():
         if len(param_g['title']) > 0:
             messages = asyncio.run(Tele.main(param_g))
 
-        try:
-            for mess in messages:
-                global group_id
-                if mess['grouped_id'] != None and mess['grouped_id'] != str(group_id):
+        if len(messages) > 0:
+            try:
+                for mess in messages:
+                    global group_id
+                    if str(mess['grouped_id']) == "None" or str(mess['grouped_id']) != str(group_id):
 
-                    linkgrup_m = "https://t.me/" + str(param_g['title']) +"/" + str(mess['id'])
-                    linkgrup = "https://t.me/" + str(param_g['title']) +"/"
-                    media = mess['media']
-                    if media != None:
-                        for user in param_g['users']:
-                            if media['_'] == 'MessageMediaWebPage':
-                                url = media['webpage']
-                                url = url['url']
-                                sock = '<a href = "' + str(url) + '">' + '|' + "</a>"
-                                sock = str(sock) + '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
-                                mtext = str(sock) + '\n\n'+ str(mess['message'])
-                                bot.send_message(user, mtext, parse_mode='HTML')
-                            else:
-                                for user in param_g['users']:
-                                    sock = '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
+                        linkgrup_m = "https://t.me/" + str(param_g['title']) +"/" + str(mess['id'])
+                        linkgrup = "https://t.me/" + str(param_g['title']) +"/"
+                        media = mess['media']
+                        if media != None:
+                            for user in param_g['users']:
+                                if media['_'] == 'MessageMediaWebPage':
+                                    url = media['webpage']
+                                    url = url['url']
+                                    sock = '<a href = "' + str(url) + '">' + '|' + "</a>"
+                                    sock = str(sock) + '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
                                     mtext = str(sock) + '\n\n'+ str(mess['message'])
                                     bot.send_message(user, mtext, parse_mode='HTML')
+                                else:
+                                    for user in param_g['users']:
+                                        sock = '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
+                                        mtext = str(sock) + '\n\n'+ str(mess['message'])
+                                        bot.send_message(user, mtext, parse_mode='HTML')
 
+                        else:
+                            for user in param_g['users']:
+                                sock = '<a href = "'+ str(linkgrup) +'">' + str(param_g["nazv"]) + "</a>"
+                                bot.send_message(user,str(sock) + "\n\n" +str(mess['message']),
+                                parse_mode='HTML', disable_web_page_preview=True)
+                        group_id = mess['grouped_id']
                     else:
-                        for user in param_g['users']:
-                            sock = '<a href = "'+ str(linkgrup) +'">' + str(param_g["nazv"]) + "</a>"
-                            bot.send_message(user,str(sock) + "\n\n" +str(mess['message']),
-                            parse_mode='HTML', disable_web_page_preview=True)
-                else:
-                    linkgrup_m = "https://t.me/" + str(param_g['title']) +"/" + str(mess['id'])
-                    linkgrup = "https://t.me/" + str(param_g['title']) +"/"
-                    media = mess['media']
-                    if media != None:
-                        for user in param_g['users']:
-                            if media['_'] == 'MessageMediaWebPage':
-                                url = media['webpage']
-                                url = url['url']
-                                sock = '<a href = "' + str(url) + '">' + '|' + "</a>"
-                                sock = str(sock) + '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
-                                mtext = str(sock) + '\n\n'+ str(mess['message'])
-                                bot.send_message(user, mtext, parse_mode='HTML')
-                            else:
-                                for user in param_g['users']:
-                                    sock = '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
-                                    mtext = str(sock) + '\n\n'+ str(mess['message'])
-                                    bot.send_message(user, mtext, parse_mode='HTML')
-                    else:
-                        for user in param_g['users']:
-                            sock = '<a href = "'+ str(linkgrup) +'">' + str(param_g["nazv"]) + "</a>"
-                            bot.send_message(user,str(sock) + "\n\n" +str(mess['message']),
-                            parse_mode='HTML', disable_web_page_preview=True)
-                group_id = mess['grouped_id']
+                        continue
+                if len(messages) > 0:
+                    global num_messages
+                    num_messages += len(messages)
+            except:
+                e = sys.exc_info()[1]
+                text = "Произошла ошибка: " + str(e.args[0])
+                bot.send_message(param.AUTHOR_ID, text)
+                print(str(param_g))
 
-            if len(messages) > 0:
-                print("Отправлено " + str(len(messages)) + " сообщений " + str(len(param_g['users'])) + " пользователям группы " + str(param_g['nazv']))
-        except:
-            e = sys.exc_info()[1]
-            text = "Произошла ошибка: " + str(e.args[0])
-            bot.send_message(param.AUTHOR_ID, text)
-            print(str(param_g))
+def info_print():
+    global num_messages
+    time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(time + ": Отправленно", num_messages, "постов")
+    num_messages = 0
+
+def reclam():
+    time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(time + ": время рекламы")
+    user = Sqldb.get_user()
+    for us in user:
+        bot.send_message(us,"Здесь могла бы быть ваша реклама\nВсе вопросы: @Maxidik")
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
 
-    user = [message.from_user.id, message.from_user.username]
+    user = [message.chat.id, message.chat.username]
     prov = Sqldb.r_users(user)
     key = Keys.main_keys()
 
     if prov is True:
         bot.send_message(message.chat.id, 'С возвращением!', reply_markup = key)
     else:
+        if len(message.text.split())>1 and message.text.split()[1] > 0:
+            check = Sqldb.add_ref(message.text.split()[1])
+
+            if check:
+                text = "Была использована ваша реферальная ссылка, максимальное число каналов увеличено"
+                bot.send_message(message.text.split()[1],text)
+            else:
+                text = "Была использована ваша реферальная ссылка. Рефералов до слота 1/2"
+                bot.send_message(message.text.split()[1],text)
         bot.send_message(message.chat.id, 'Доброго времени суток, этот бот'
         ' создан для того, чтобы обьединить информацию из нескольких групп.',
          reply_markup = key)
@@ -121,30 +123,51 @@ def get_message(message):
             " количество каналов", reply_markup = key)
     elif message.text == "🔖Список каналов":
         grup_g = Sqldb.get_grup(message.chat.id)
-        print(grup_g)
         if grup_g != None and grup_g != "None":
             grup_g = grup_g.split()
+            if "None" in grup_g:
+                grup_g.remove("None")
+            if "None_p" in grup_g:
+                grup_g.remove("None_p")
             grup_list = []
             for grup in grup_g:
-                print(grup)
-                param = Sqldb.get_grup_param(grup)
-                if param['g_id'] == "":
-                    param['nazv'] = "Канал удален"
-                    param['g_id'] = grup
-                grup_list.append(param)
+                paramet = Sqldb.get_grup_param(grup)
+                if paramet['g_id'] == "":
+                    paramet['nazv'] = "Канал удален"
+                    paramet['g_id'] = grup
+                grup_list.append(paramet)
+            print("====",message.chat.username,sep="\n",end=": \n")
+            for grup in grup_list:
+                print(grup['title'],grup['nazv'],sep="/")
+            print('====')
             key = Keys.grup_list_keys(grup_list,message.chat.id)
             bot.send_message(message.chat.id,"Ваш список каналов: ",
-            reply_markup = key)
+            reply_markup=key)
         else:
             key = Keys.main_keys()
             bot.send_message(message.chat.id,"У вас нет активных групп",
             reply_markup = key)
+
+    elif message.text == "⭕️Помощь":
+        key = Keys.main_keys()
+        text = "Данный бот создан для объединения новостей из разных групп в одну новостную линию. \nПо всем имеющимся вопросам обращаться - @Maxidik"
+        bot.send_message(message.chat.id, text, reply_markup=key)
+    elif message.text == "👤Личный кабинет":
+        key = Keys.main_keys()
+        paramet = Sqldb.get_us_param(message.chat.id)
+        dop = int(paramet['refers'])%2
+        if dop == 0:
+            dop = 2
+        refurl = "http://t.me/" + param.BOT_NAME + "?start=" + str(message.chat.id)
+        text = "Рефералов: %s \nРефералов до получения слота группы: %s \nВаша реферальная ссылка: \n%s \nБаланс: %s"%(paramet['refers'], dop, refurl, paramet['balans'])
+        bot.send_message(message.chat.id, text, reply_markup=key)
     elif message.text == "-q":
-        print('a')
-        t.do_run = False
-        t.join()
-        global exit
-        exit = False
+        if str(message.chat.id) == str(param.AUTHOR_ID):
+            print('Можно остановить')
+            t.do_run = False
+            t.join()
+            global exit
+            exit = False
     else:
         bot.send_message(message.chat.id,"Команда неизвестна или находится в разработке")
 
@@ -201,8 +224,15 @@ def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
 if __name__ == "__main__":
     global group_id
     group_id = None
+
+    global num_messages
+    num_messages = 0
     #schedule.every(15).seconds.do(function_to_run)
     schedule.every(1).minutes.do(function_to_run)
+    schedule.every(1).hour.do(info_print)
+    schedule.every().day.at("12:00").do(reclam)
+    schedule.every().day.at("15:00").do(reclam)
+    schedule.every().day.at("18:00").do(reclam)
     t = threading.Thread(target=send_message)
     t.start()
     global exit

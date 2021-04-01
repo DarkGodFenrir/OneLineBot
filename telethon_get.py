@@ -120,7 +120,7 @@ class Tele:
 
             grup = {'id':chats[0].id,'title':chats[0].title,
             'username':chats[0].username,'last':messages[0].id,
-            'u_id':message.from_user.id,'u_username':message.from_user.username}
+            'u_id':message.chat.id,'u_username':message.chat.username}
 
             add_q_sql = Sqldb.add_new_grup(grup)
 
