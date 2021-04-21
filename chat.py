@@ -8,7 +8,8 @@ import sys
 import threading
 from threading import Thread
 from telethon_get import *
-from sqlline import *
+from mysql import *
+# from sqlline import *
 from keys import *
 
 from telethon.sync import TelegramClient
@@ -24,8 +25,8 @@ def send_message():
 
 def function_to_run():
     max_grup = Sqldb.get_max_grup()
-    for i in range(int(max_grup) + 1):
-        param_g = Sqldb.get_param(i)
+    for gru in max_grup:
+        param_g = Sqldb.get_param(gru)
         messages = []
         if len(param_g['title']) > 0:
             messages = asyncio.run(Tele.main(param_g))
@@ -41,25 +42,76 @@ def function_to_run():
                         media = mess['media']
                         if media != None:
                             for user in param_g['users']:
-                                if media['_'] == 'MessageMediaWebPage':
-                                    url = media['webpage']
-                                    url = url['url']
-                                    sock = '<a href = "' + str(url) + '">' + '|' + "</a>"
-                                    sock = str(sock) + '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
-                                    mtext = str(sock) + '\n\n'+ str(mess['message'])
-                                    bot.send_message(user, mtext, parse_mode='HTML')
-                                else:
-                                    for user in param_g['users']:
+                                try:
+                                    if media['_'] == 'MessageMediaWebPage':
+                                        url = media['webpage']
+                                        url = url['url']
+                                        sock = '<a href = "' + str(url) + '">' + '|' + "</a>"
+                                        sock = str(sock) + '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
+                                        mtext = str(sock) + '\n\n'+ str(mess['message'])
+                                        bot.send_message(user, mtext, parse_mode='HTML')
+                                    else:
                                         sock = '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
                                         mtext = str(sock) + '\n\n'+ str(mess['message'])
                                         bot.send_message(user, mtext, parse_mode='HTML')
+                                except:
+                                    e = sys.exc_info()[1]
+                                    if str(e.args[0]).find('bot was blocked by the user') > -1:
+                                        Sqldb.block_user(user)
+                                        delgrup = Sqldb.get_grup(user)
+                                        if delgrup != None and delgrup != "None":
+                                            delgrup = delgrup.split()
+                                            if "None" in delgrup:
+                                                delgrup.remove("None")
+                                            if "None_p" in delgrup:
+                                                delgrup.remove("None_p")
+                                        for dell in delgrup:
+                                            if str(dell).find("_p") > -1:
+                                                param_for_dell = ["del", str(dell)[len(str(dell))-2:], "p",user]
+                                            else:
+                                                param_for_del = ["del", dell, user]
+                                            print(param_for_del)
+                                            Sqldb.edit_list(param_for_del)
+                                    else:
+                                        e = sys.exc_info()[1]
+                                        text = "Произошла ошибка: " + str(e.args[0])
+                                        print(mess)
+                                        bot.send_message(param.AUTHOR_ID, text)
+                                        print(str(sys.exc_info()))
 
                         else:
                             for user in param_g['users']:
-                                sock = '<a href = "'+ str(linkgrup) +'">' + str(param_g["nazv"]) + "</a>"
-                                bot.send_message(user,str(sock) + "\n\n" +str(mess['message']),
-                                parse_mode='HTML', disable_web_page_preview=True)
-                        group_id = mess['grouped_id']
+                                try:
+                                    sock = '<a href = "'+ str(linkgrup) +'">' + str(param_g["nazv"]) + "</a>"
+                                    bot.send_message(user,str(sock) + "\n\n" +str(mess['message']),
+                                    parse_mode='HTML', disable_web_page_preview=True)
+                                except:
+                                    e = sys.exc_info()[1]
+                                    if str(e.args[0]).find('bot was blocked by the user') > -1:
+                                        Sqldb.block_user(user)
+                                        delgrup = Sqldb.get_grup(user)
+                                        if delgrup != None and delgrup != "None":
+                                            delgrup = delgrup.split()
+                                            if "None" in delgrup:
+                                                delgrup.remove("None")
+                                            if "None_p" in delgrup:
+                                                delgrup.remove("None_p")
+                                        for dell in delgrup:
+                                            if str(dell).find("_p") > -1:
+                                                param_for_del = ["del", str(dell)[len(str(dell))-2:], "p", user]
+                                            else:
+                                                param_for_del = ["del", dell, user]
+                                            print(param_for_del)
+                                            Sqldb.edit_list(param_for_del)
+                                    else:
+                                        e = sys.exc_info()[1]
+                                        text = "Произошла ошибка: " + str(e.args[0])
+                                        print(mess)
+                                        bot.send_message(param.AUTHOR_ID, text)
+                                        print(str(sys.exc_info()))
+
+                        if 'grouped_id' in mess:
+                            group_id = mess['grouped_id']
                     else:
                         continue
                 if len(messages) > 0:
@@ -68,8 +120,9 @@ def function_to_run():
             except:
                 e = sys.exc_info()[1]
                 text = "Произошла ошибка: " + str(e.args[0])
+                print(mess)
                 bot.send_message(param.AUTHOR_ID, text)
-                print(str(param_g))
+                print(str(sys.exc_info()))
 
 def info_print():
     global num_messages
@@ -80,9 +133,10 @@ def info_print():
 def reclam():
     time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     print(time + ": время рекламы")
-    user = Sqldb.get_user()
-    for us in user:
-        bot.send_message(us,"Здесь могла бы быть ваша реклама\nВсе вопросы: @Maxidik")
+    user = Sqldb.get_user().split()
+    print(user)
+    # for us in user:
+    #     bot.send_message(us,"Здесь могла бы быть ваша реклама\nВсе вопросы: @Maxidik")
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
@@ -94,9 +148,8 @@ def start_message(message):
     if prov is True:
         bot.send_message(message.chat.id, 'С возвращением!', reply_markup = key)
     else:
-        if len(message.text.split())>1 and message.text.split()[1] > 0:
+        if len(message.text.split())>1 and int(message.text.split()[1]) > 0:
             check = Sqldb.add_ref(message.text.split()[1])
-
             if check:
                 text = "Была использована ваша реферальная ссылка, максимальное число каналов увеличено"
                 bot.send_message(message.text.split()[1],text)
@@ -121,6 +174,7 @@ def get_message(message):
             key = Keys.main_keys()
             bot.send_message(message.chat.id,"У вас сайчас максимальное"
             " количество каналов", reply_markup = key)
+
     elif message.text == "🔖Список каналов":
         grup_g = Sqldb.get_grup(message.chat.id)
         if grup_g != None and grup_g != "None":
@@ -177,7 +231,7 @@ def addchanel(message):
 
     if result == 1:
         Sqldb.grup_plus(message.chat.id)
-        bot.send_message(message.chat.id,"Канал добавлен, ждите новых постов")
+        bot.send_message(message.chat.id,"Канал добавлен, с этого момента вы будете получать НОВЫЕ посты канала")
     elif result == 2:
         bot.send_message(message.chat.id,"Канал уже добавлен в ваш список")
     elif result == 3:
@@ -191,7 +245,7 @@ def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
     info = re.split("[_]", str(callback_query.data))
     rez = Sqldb.edit_list(info)
     if rez == 0:
-        bot.send_message(callback_query.from_user.id, "Канал успешно удлен")
+        bot.send_message(callback_query.from_user.id, "Канал успешно удален")
     else:
         print("Ошибка изменения листа")
     bot.answer_callback_query(callback_query.id)
@@ -214,7 +268,9 @@ def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
     info = re.split("[_]", str(callback_query.data))
     print(info)
     rez = Sqldb.edit_list(info)
-    if rez == 2:
+    if rez[0] == 2:
+        if rez[1]:
+            asyncio.run(Tele.main(rez[2]))
         bot.send_message(callback_query.from_user.id, "Канал успешно запущен")
     else:
         print("Ошибка изменения листа")
@@ -227,7 +283,7 @@ if __name__ == "__main__":
 
     global num_messages
     num_messages = 0
-    #schedule.every(15).seconds.do(function_to_run)
+    schedule.every(15).seconds.do(function_to_run)
     schedule.every(1).minutes.do(function_to_run)
     schedule.every(1).hour.do(info_print)
     schedule.every().day.at("12:00").do(reclam)

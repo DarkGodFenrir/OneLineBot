@@ -1,9 +1,11 @@
 from telethon.sync import TelegramClient
 from telethon import connection, functions, types, sync
+import sys
 import param
 import json
 import asyncio
-from sqlline import *
+from mysql import *
+# from sqlline import *
 
 
 from datetime import date, datetime
@@ -28,50 +30,55 @@ class DateTimeEncoder(json.JSONEncoder):
 class Tele:
 
     async def get_last_news(param, client):
-        channel = '@' + str(param['title'])
+        try:
+            channel = '@' + str(param['title'])
 
-        offset_msg = 0    # номер записи, с которой начинается считывание
-        limit_msg = 100   # максимальное число записей, передаваемых за один раз
-        messages = []
+            offset_msg = 0    # номер записи, с которой начинается считывание
+            limit_msg = 100   # максимальное число записей, передаваемых за один раз
+            messages = []
 
-        last_id = int(param['last_news'])
-        all_messages = []   # список всех сообщений
-        total_messages = 0
-        total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
+            last_id = int(param['last_news'])
+            all_messages = []   # список всех сообщений
+            total_messages = 0
+            total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
 
-        while True:
-            history = await client(GetHistoryRequest(
-            peer = channel,
-            offset_id=offset_msg,
-            offset_date=None,
-            add_offset=0,
-            limit=limit_msg,
-            max_id=0,
-            min_id=last_id,
-            hash=0
-            ))
+            while True:
+                history = await client(GetHistoryRequest(
+                peer = channel,
+                offset_id=offset_msg,
+                offset_date=None,
+                add_offset=0,
+                limit=limit_msg,
+                max_id=0,
+                min_id=last_id,
+                hash=0
+                ))
 
-            if not history.messages:
-                break
+                if not history.messages:
+                    break
 
-            messages = history.messages
+                messages = history.messages
 
-            for message in messages:
-                all_messages.append(message.to_dict())
+                for message in messages:
+                    all_messages.append(message.to_dict())
 
-            offset_msg = messages[len(messages) - 1].id
-            total_messages = len(all_messages)
+                offset_msg = messages[len(messages) - 1].id
+                total_messages = len(all_messages)
 
-            if total_count_limit != 0 and total_messages >= total_count_limit:
-                break
+                if total_count_limit != 0 and total_messages >= total_count_limit:
+                    break
 
-        if len(messages) > 0:
-            Sqldb.edit_number(messages[0].id, param)
+            if len(messages) > 0:
+                Sqldb.edit_number(messages[0].id, param)
 
-        per_messages = []
-        for i in range(len(all_messages)):
-            per_messages.append(all_messages[(len(all_messages)-1)-i])
-        return per_messages
+            per_messages = []
+            for i in range(len(all_messages)):
+                per_messages.append(all_messages[(len(all_messages)-1)-i])
+            return per_messages
+        except:
+            print(sys.exc_info())
+            Sqldb.block(str(param['title']))
+            return []
 
 
         #with open('channel_messages.json', 'w', encoding='utf8') as outfile:
