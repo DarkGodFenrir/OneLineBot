@@ -31,13 +31,14 @@ class Tele:
 
     async def get_last_news(param, client):
         try:
-            channel = '@' + str(param['title'])
+            print(param)
+            channel = '@' + param['title']
 
             offset_msg = 0    # номер записи, с которой начинается считывание
             limit_msg = 100   # максимальное число записей, передаваемых за один раз
             messages = []
 
-            last_id = int(param['last_news'])
+            last_id = param['last_news']
             all_messages = []   # список всех сообщений
             total_messages = 0
             total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
@@ -77,7 +78,7 @@ class Tele:
             return per_messages
         except:
             print(sys.exc_info())
-            Sqldb.block(str(param['title']))
+            Sqldb.block(param['title'])
             return []
 
 

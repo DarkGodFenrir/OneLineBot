@@ -1,14 +1,15 @@
 import sqlite3
+import asyncio
 import re
 
 class Sqldb:
     def get_max_grup():
         conn = sqlite3.connect('news.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT seq FROM sqlite_sequence WHERE name = ?",('grup',))
+        cursor.execute("SELECT id FROM grup WHERE g_role != -1 AND g_users != ''")
         prow = cursor.fetchall()
-        prow = Sqldb.och(prow[0])
-        prow = Sqldb.ochstr(prow)
+        prow = Sqldb.all_och(prow)
+        prow = prow.split()
         cursor.close()
         return prow
 
@@ -180,7 +181,10 @@ class Sqldb:
 
                     cursor = conn.cursor()
                     prow = Sqldb.ochstr(str(prow))
-                    cursor.execute('UPDATE grup SET g_users = ? WHERE g_id = ?',(prow,grup['id'],))
+                    if prow != []:
+                        cursor.execute('UPDATE grup SET g_users = ? WHERE g_id = ?',(prow,grup['id'],))
+                    else:
+                        cursor.execute('UPDATE grup SET g_users = ?, g_last = ? WHERE g_id = ?',(prow, grip['last'], grup['id'],))
                     cursor.execute('SELECT ugroup FROM main WHERE uid = ?',(grup['u_id'],))
 
                     prow = cursor.fetchall()
@@ -262,7 +266,6 @@ class Sqldb:
                 if str(prow[i]) == str(param[1]):
                     prow[i] = str(prow[i]) + "_p"
 
-            print(prow)
             cursor.execute("SELECT g_users FROM grup WHERE g_id = ?", (param[1],))
             grup_u = cursor.fetchall()
             grup_u = Sqldb.all_och(grup_u)
@@ -271,8 +274,6 @@ class Sqldb:
                 grup_u.remove(param[2])
             prow = Sqldb.all_och(prow)
             grup_u = Sqldb.all_och(grup_u)
-            print(prow)
-            print(grup_u)
             with conn:
                 cursor = conn.cursor()
                 cursor.execute('UPDATE main SET ugroup = ? WHERE uid = ?',(prow, param[2],))
@@ -290,6 +291,10 @@ class Sqldb:
             grup_u = cursor.fetchall()
             grup_u = Sqldb.all_och(grup_u)
             grup_u = grup_u.split()
+            cursor.execute("SELECT g_title FROM grup WHERE g_id = ?", (param[1],))
+            grup_title = cursor.fetchall()
+            grup_title = Sqldb.all_och(grup_title)
+            grup_title = {'title': grup_title}
             if param[3] not in grup_u:
                 grup_u.append(param[3])
             prow = Sqldb.all_och(prow)
@@ -300,7 +305,9 @@ class Sqldb:
                 cursor = conn.cursor()
                 cursor.execute('UPDATE main SET ugroup = ? WHERE uid = ?',(prow, param[3],))
                 cursor.execute('UPDATE grup SET g_users = ? WHERE g_id = ?',(grup_u,param[1],))
-                for_r = 2
+                for_r = [2, False]
+                if grup_u == []:
+                    for_r = [2, True, grup_title]
                 cursor.close()
 
         return for_r
@@ -329,6 +336,13 @@ class Sqldb:
             cursor.close()
             return False
 
+    def block(title):
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        with conn:
+            cursor.execute('UPDATE grup SET g_role = -1 WHERE g_username = ?',(title,))
+        cursor.close()
+
 
     def get_grup(id):
         conn = sqlite3.connect('news.db')
@@ -343,9 +357,9 @@ class Sqldb:
     def get_user():
         conn = sqlite3.connect('news.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT uid FROM main WHERE akt = 1")
+        cursor.execute("SELECT uid FROM main WHERE uakt = 1")
         prow = cursor.fetchall()
-        prow = Sqldb.all_och(prow[0])
+        prow = Sqldb.all_och(str(prow))
         cursor.close()
         return prow
 
@@ -360,6 +374,14 @@ class Sqldb:
             cursor.execute('UPDATE main SET utgrup =? WHERE uid = ?',(int(prow)+1,id,))
         cursor.close()
         return True
+
+    def block_user(id):
+        conn = sqlite3.connect('news.db')
+        cursor = conn.cursor()
+        with conn:
+            cursor.execute('UPDATE main SET uakt = -1 WHERE uid = ?',(id,))
+
+
 
     def och(prow):
         for och in prow:

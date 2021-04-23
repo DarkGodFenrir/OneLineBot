@@ -40,6 +40,7 @@ def function_to_run():
                         linkgrup_m = "https://t.me/" + str(param_g['title']) +"/" + str(mess['id'])
                         linkgrup = "https://t.me/" + str(param_g['title']) +"/"
                         media = mess['media']
+
                         if media != None:
                             for user in param_g['users']:
                                 try:
@@ -268,9 +269,9 @@ def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
     info = re.split("[_]", str(callback_query.data))
     print(info)
     rez = Sqldb.edit_list(info)
-    if rez[0] == 2:
-        if rez[1]:
-            asyncio.run(Tele.main(rez[2]))
+    if rez['num'] == 2:
+        if rez['flag']:
+            asyncio.run(Tele.main(rez))
         bot.send_message(callback_query.from_user.id, "Канал успешно запущен")
     else:
         print("Ошибка изменения листа")
