@@ -1,21 +1,18 @@
 # This Python file uses the following encoding: utf-8
-import telebot
-import param
-import asyncio
-import schedule
-import time
-import sys
+import re
 import threading
-from threading import Thread
-from telethon_get import *
-from mysql import *
+import time
+
+import schedule
+
+import exec_error
 # from sqlline import *
 from keys import *
-
-from telethon.sync import TelegramClient
-from telethon import connection, functions, types, sync
+from mysql import *
+from telethon_get import *
 
 bot = telebot.TeleBot(param.TOKEN)
+
 
 def send_message():
     t = threading.currentThread()
@@ -23,12 +20,13 @@ def send_message():
         schedule.run_pending()
         time.sleep(1)
 
+
 def function_to_run():
-    max_grup = Sqldb.get_max_grup()
-    for gru in max_grup:
+    max_group = get_max_group()
+    for gru in max_group:
         param_g = Sqldb.get_param(gru)
         messages = []
-        if len(param_g['title']) > 0:
+        if len(param_g['tag']) > 0:
             messages = asyncio.run(Tele.main(param_g))
 
         if len(messages) > 0:
@@ -37,79 +35,39 @@ def function_to_run():
                     global group_id
                     if str(mess['grouped_id']) == "None" or str(mess['grouped_id']) != str(group_id):
 
-                        linkgrup_m = "https://t.me/" + str(param_g['title']) +"/" + str(mess['id'])
-                        linkgrup = "https://t.me/" + str(param_g['title']) +"/"
+                        link_group_m = "https://t.me/" + str(param_g['tag']) + "/" + str(mess['id'])
+                        link_group = "https://t.me/" + str(param_g['tag']) + "/"
                         media = mess['media']
 
-                        if media != None:
-                            for user in param_g['users']:
+                        if media is not None:
+                            for user in param_g['users'].split():
                                 try:
                                     if media['_'] == 'MessageMediaWebPage':
                                         url = media['webpage']
                                         url = url['url']
                                         sock = '<a href = "' + str(url) + '">' + '|' + "</a>"
-                                        sock = str(sock) + '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
-                                        mtext = str(sock) + '\n\n'+ str(mess['message'])
-                                        bot.send_message(user, mtext, parse_mode='HTML')
+                                        sock = str(sock) + '<a href = "' + str(link_group_m) + '">' + str(
+                                            param_g["name"]) + "</a>"
+                                        message_text = str(sock) + '\n\n' + str(mess['message'])
+                                        bot.send_message(int(user), message_text, parse_mode='HTML')
                                     else:
-                                        sock = '<a href = "'+ str(linkgrup_m) +'">' + str(param_g["nazv"]) + "</a>"
-                                        mtext = str(sock) + '\n\n'+ str(mess['message'])
-                                        bot.send_message(user, mtext, parse_mode='HTML')
+                                        sock = '<a href = "' + str(link_group_m) + '">' + str(param_g["name"]) + "</a>"
+                                        message_text = str(sock) + '\n\n' + str(mess['message'])
+                                        bot.send_message(int(user), message_text, parse_mode='HTML')
                                 except:
-                                    e = sys.exc_info()[1]
-                                    if str(e.args[0]).find('bot was blocked by the user') > -1:
-                                        Sqldb.block_user(user)
-                                        delgrup = Sqldb.get_grup(user)
-                                        if delgrup != None and delgrup != "None":
-                                            delgrup = delgrup.split()
-                                            if "None" in delgrup:
-                                                delgrup.remove("None")
-                                            if "None_p" in delgrup:
-                                                delgrup.remove("None_p")
-                                        for dell in delgrup:
-                                            if str(dell).find("_p") > -1:
-                                                param_for_dell = ["del", str(dell)[len(str(dell))-2:], "p",user]
-                                            else:
-                                                param_for_del = ["del", dell, user]
-                                            print(param_for_del)
-                                            Sqldb.edit_list(param_for_del)
-                                    else:
-                                        e = sys.exc_info()[1]
-                                        text = "Произошла ошибка: " + str(e.args[0])
-                                        print(mess)
-                                        bot.send_message(param.AUTHOR_ID, text)
-                                        print(str(sys.exc_info()))
-
+                                    error = sys.exc_info()[1]
+                                    error_text = exec_error.exec_error(error, user)
+                                    bot.send_message(param.AUTHOR_ID, error_text)
                         else:
-                            for user in param_g['users']:
+                            for user in param_g['users'].split():
                                 try:
-                                    sock = '<a href = "'+ str(linkgrup) +'">' + str(param_g["nazv"]) + "</a>"
-                                    bot.send_message(user,str(sock) + "\n\n" +str(mess['message']),
-                                    parse_mode='HTML', disable_web_page_preview=True)
+                                    sock = '<a href = "' + str(link_group) + '">' + str(param_g["name"]) + "</a>"
+                                    bot.send_message(int(user), str(sock) + "\n\n" + str(mess['message']),
+                                                     parse_mode='HTML', disable_web_page_preview=True)
                                 except:
-                                    e = sys.exc_info()[1]
-                                    if str(e.args[0]).find('bot was blocked by the user') > -1:
-                                        Sqldb.block_user(user)
-                                        delgrup = Sqldb.get_grup(user)
-                                        if delgrup != None and delgrup != "None":
-                                            delgrup = delgrup.split()
-                                            if "None" in delgrup:
-                                                delgrup.remove("None")
-                                            if "None_p" in delgrup:
-                                                delgrup.remove("None_p")
-                                        for dell in delgrup:
-                                            if str(dell).find("_p") > -1:
-                                                param_for_del = ["del", str(dell)[len(str(dell))-2:], "p", user]
-                                            else:
-                                                param_for_del = ["del", dell, user]
-                                            print(param_for_del)
-                                            Sqldb.edit_list(param_for_del)
-                                    else:
-                                        e = sys.exc_info()[1]
-                                        text = "Произошла ошибка: " + str(e.args[0])
-                                        print(mess)
-                                        bot.send_message(param.AUTHOR_ID, text)
-                                        print(str(sys.exc_info()))
+                                    error = sys.exc_info()[1]
+                                    error_text = exec_error.exec_error(error, user)
+                                    bot.send_message(param.AUTHOR_ID, error_text)
 
                         if 'grouped_id' in mess:
                             group_id = mess['grouped_id']
@@ -119,17 +77,17 @@ def function_to_run():
                     global num_messages
                     num_messages += len(messages)
             except:
-                e = sys.exc_info()[1]
-                text = "Произошла ошибка: " + str(e.args[0])
-                print(mess)
-                bot.send_message(param.AUTHOR_ID, text)
-                print(str(sys.exc_info()))
+                error = sys.exc_info()[1]
+                error_text = exec_error.exec_error(error, user)
+                bot.send_message(param.AUTHOR_ID, error_text)
+
 
 def info_print():
     global num_messages
     time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     print(time + ": Отправленно", num_messages, "постов")
     num_messages = 0
+
 
 def reclam():
     time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -139,45 +97,46 @@ def reclam():
     # for us in user:
     #     bot.send_message(us,"Здесь могла бы быть ваша реклама\nВсе вопросы: @Maxidik")
 
+
 @bot.message_handler(commands=['start'])
 def start_message(message):
-
     user = [message.chat.id, message.chat.username]
-    prov = Sqldb.r_users(user)
+    prov = Sqldb.login_user(user)
     key = Keys.main_keys()
 
     if prov is True:
-        bot.send_message(message.chat.id, 'С возвращением!', reply_markup = key)
+        bot.send_message(message.chat.id, 'С возвращением!', reply_markup=key)
     else:
-        if len(message.text.split())>1 and int(message.text.split()[1]) > 0:
+        if len(message.text.split()) > 1 and int(message.text.split()[1]) > 0:
             check = Sqldb.add_ref(message.text.split()[1])
             if check:
                 text = "Была использована ваша реферальная ссылка, максимальное число каналов увеличено"
-                bot.send_message(message.text.split()[1],text)
+                bot.send_message(message.text.split()[1], text)
             else:
                 text = "Была использована ваша реферальная ссылка. Рефералов до слота 1/2"
-                bot.send_message(message.text.split()[1],text)
+                bot.send_message(message.text.split()[1], text)
         bot.send_message(message.chat.id, 'Доброго времени суток, этот бот'
-        ' создан для того, чтобы обьединить информацию из нескольких групп.',
-         reply_markup = key)
+                                          ' создан для того, чтобы обьединить информацию из нескольких групп.',
+                         reply_markup=key)
+
 
 @bot.message_handler()
 def get_message(message):
     if message.text == "➕Добавить канал":
-        prov = Sqldb.p_chanel(message.chat.id)
+        prov = Sqldb.channel_check(message.chat.id)
 
         if prov[0] < prov[1]:
-            bot.send_message(message.chat.id,"У вас сейчас %s из %s каналов,"
-            " чтобы добавить новый, ведите ссылку на канал:"%
-            (prov[0],prov[1]))
+            bot.send_message(message.chat.id, "У вас сейчас %s из %s каналов,"
+                                              " чтобы добавить новый, ведите ссылку на канал:" %
+                             (prov[0], prov[1]))
             bot.register_next_step_handler(message, addchanel)
         else:
             key = Keys.main_keys()
-            bot.send_message(message.chat.id,"У вас сайчас максимальное"
-            " количество каналов", reply_markup = key)
+            bot.send_message(message.chat.id, "У вас сайчас максимальное"
+                                              " количество каналов", reply_markup=key)
 
     elif message.text == "🔖Список каналов":
-        grup_g = Sqldb.get_grup(message.chat.id)
+        grup_g = Sqldb.get_group(message.chat.id)
         if grup_g != None and grup_g != "None":
             grup_g = grup_g.split()
             if "None" in grup_g:
@@ -186,22 +145,22 @@ def get_message(message):
                 grup_g.remove("None_p")
             grup_list = []
             for grup in grup_g:
-                paramet = Sqldb.get_grup_param(grup)
+                paramet = Sqldb.get_group_param(grup)
                 if paramet['g_id'] == "":
                     paramet['nazv'] = "Канал удален"
                     paramet['g_id'] = grup
                 grup_list.append(paramet)
-            print("====",message.chat.username,sep="\n",end=": \n")
+            print("====", message.chat.username, sep="\n", end=": \n")
             for grup in grup_list:
-                print(grup['title'],grup['nazv'],sep="/")
+                print(grup['title'], grup['nazv'], sep="/")
             print('====')
-            key = Keys.grup_list_keys(grup_list,message.chat.id)
-            bot.send_message(message.chat.id,"Ваш список каналов: ",
-            reply_markup=key)
+            key = Keys.grup_list_keys(grup_list, message.chat.id)
+            bot.send_message(message.chat.id, "Ваш список каналов: ",
+                             reply_markup=key)
         else:
             key = Keys.main_keys()
-            bot.send_message(message.chat.id,"У вас нет активных групп",
-            reply_markup = key)
+            bot.send_message(message.chat.id, "У вас нет активных групп",
+                             reply_markup=key)
 
     elif message.text == "⭕️Помощь":
         key = Keys.main_keys()
@@ -210,11 +169,12 @@ def get_message(message):
     elif message.text == "👤Личный кабинет":
         key = Keys.main_keys()
         paramet = Sqldb.get_us_param(message.chat.id)
-        dop = int(paramet['refers'])%2
+        dop = int(paramet['refers']) % 2
         if dop == 0:
             dop = 2
         refurl = "http://t.me/" + param.BOT_NAME + "?start=" + str(message.chat.id)
-        text = "Рефералов: %s \nРефералов до получения слота группы: %s \nВаша реферальная ссылка: \n%s \nБаланс: %s"%(paramet['refers'], dop, refurl, paramet['balans'])
+        text = "Рефералов: %s \nРефералов до получения слота группы: %s \nВаша реферальная ссылка: \n%s \nБаланс: %s" % (
+            paramet['refers'], dop, refurl, paramet['balans'])
         bot.send_message(message.chat.id, text, reply_markup=key)
     elif message.text == "-q":
         if str(message.chat.id) == str(param.AUTHOR_ID):
@@ -224,21 +184,22 @@ def get_message(message):
             global exit
             exit = False
     else:
-        bot.send_message(message.chat.id,"Команда неизвестна или находится в разработке")
+        bot.send_message(message.chat.id, "Команда неизвестна или находится в разработке")
+
 
 def addchanel(message):
-
     result = asyncio.run(Tele.reg_grup(message))
 
     if result == 1:
-        Sqldb.grup_plus(message.chat.id)
-        bot.send_message(message.chat.id,"Канал добавлен, с этого момента вы будете получать НОВЫЕ посты канала")
+        Sqldb.group_plus(message.chat.id)
+        bot.send_message(message.chat.id, "Канал добавлен, с этого момента вы будете получать НОВЫЕ посты канала")
     elif result == 2:
-        bot.send_message(message.chat.id,"Канал уже добавлен в ваш список")
+        bot.send_message(message.chat.id, "Канал уже добавлен в ваш список")
     elif result == 3:
-        bot.send_message(message.chat.id,"Бот не может получать посты этой группы")
+        bot.send_message(message.chat.id, "Бот не может получать посты этой группы")
     else:
-        bot.send_message(message.chat.id,"Произошла неизвестная ошибка, группа не добавлена")
+        bot.send_message(message.chat.id, "Произошла неизвестная ошибка, группа не добавлена")
+
 
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('del_'))
 def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
@@ -251,6 +212,7 @@ def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
         print("Ошибка изменения листа")
     bot.answer_callback_query(callback_query.id)
 
+
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('pau_'))
 def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
     # code = callback_query.data[-1]
@@ -262,6 +224,7 @@ def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
     else:
         print("Ошибка изменения листа")
     bot.answer_callback_query(callback_query.id)
+
 
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('beg_'))
 def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):

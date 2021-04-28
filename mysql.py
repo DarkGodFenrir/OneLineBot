@@ -1,226 +1,252 @@
 from contextlib import closing
 import pymysql
-import re
 from pymysql.cursors import DictCursor
+
 
 def connect():
     connection = pymysql.connect(
-    host='localhost',
-    user='root',
-    password='12alex34',
-    db='telegram_news',
-    charset='utf8mb4',
-    cursorclass=DictCursor)
+        host='localhost',
+        user='root',
+        password='12alex34',
+        db='telegram_news',
+        charset='utf8mb4',
+        cursorclass=DictCursor)
     return connection
 
+
 def obed(mem):
-    stroka = ""
+    to_string = ""
     for m in mem:
-        stroka += m + " "
-    return stroka
+        to_string += m + " "
+    return to_string
+
+
+def get_max_group():
+    prow = []
+    with closing(connect()) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                                SELECT
+                                    self_id
+                                FROM
+                                    groups
+                                WHERE
+                                    status != -1
+                                AND
+                                    users != ''
+                                """)
+            for row in cursor:
+                prow.append(row['self_id'])
+            return prow
+
 
 class Sqldb:
-    def get_max_grup():
-        prow = []
-        with closing(connect()) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                                    SELECT
-                                        id
-                                    FROM
-                                        grup
-                                    WHERE
-                                        g_role != -1
-                                    AND
-                                        g_users != ''
-                                    """)
-                for row in cursor:
-                    prow.append(row['id'])
-                return prow
 
-    def edit_number(l_id,param):
+    def edit_number(self, param):
+        print(self, param)
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
-                    query = "UPDATE grup SET g_last = {0} WHERE g_username = {1}"
-                    query = query.format(l_id,param['title'])
-                    cursor.execute(query)
-                    conn.commit()
+                query = f'''UPDATE 
+                                groups 
+                            SET 
+                                last_number = ({self}) 
+                            WHERE 
+                                tag = "{param["tag"]}"'''
+                cursor.execute(query)
+                conn.commit()
 
-    def get_param(id):
+    def get_param(self):
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
-                peremen = {
-                            'gu': 'g_username', 'gus': 'g_users',
-                            'gl': 'g_last', 'gt': 'g_title', 'id': id
-                            }
-                query = "SELECT {gu}, {gus}, {gl}, {gt} FROM grup WHERE id = {id}"
-                query = query.format(**peremen)
+                query = f'''SELECT 
+                                tag, 
+                                users, 
+                                last_number, 
+                                name 
+                            FROM 
+                                groups 
+                            WHERE 
+                                self_id = {self}
+                        '''
                 cursor.execute(query)
                 for row in cursor:
-                    get =   {
-                    'title':     row['g_username'],
-                    'last_news': row['g_last'],
-                    'users':     row['g_users'].split(),
-                    'nazv':      row['g_title']
-                    }
-                    # prow = Sqldb.och(prow)
-                print('Я прошел')
-                return get
+                    return row
 
-    def get_us_param(id):
+    def get_us_param(self):
         with closing(connect()) as connection:
             with connection.cursor() as cursor:
-                peremen = ['refers','balans']
-                query = "SELECT {1},{2} FROM main WHERE uid = {3}"
-                query = query.format(*peremen,id)
+                query = f"SELECT refers, balance FROM users WHERE telegram_id = {self}"
                 cursor.execute(query)
                 for row in cursor:
-                    get = {
-                    'refers': row['refers'],
-                    'balans': row['balans']}
-                return get
+                    return row
 
-    def get_grup_param(id):
+    def get_group_param(self):
         per = False
-        if (str(id).find("_p") > -1):
-            id = re.sub("[_p]","",id)
+        if str(self).find("_p") > -1:
+            group_id = self[:-2]
             per = True
+        else:
+            group_id = self
 
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
-                znach = []
-                peremen = ['g_username','g_id', 'g_title']
-                for i in peremen:
-                    query = "SELECT {0} FROM grup WHERE g_id = {1}"
-                    query = query.format(i,id)
-                    cursor.execute(query)
-                    for row in cursor:
-                        znach.append(row[i])
+                query = f'''SELECT
+                                name, tag, group_id 
+                            FROM 
+                                groups 
+                            WHERE 
+                                group_id = {group_id}
+                        '''
+                cursor.execute(query)
 
-                get = {
-                'title': znach[0],
-                'g_id': znach[1],
-                'nazv': znach[2]}
+                get = None
+                for row in cursor:
+                    get = row
+
                 if per:
-                    get['g_id'] = str(get['g_id']) + "_p"
-                # prow = Sqldb.och(prow)
+                    get['group_id'] = str(get['group_id']) + "_p"
                 return get
 
-    def r_users(user_f):
-        znach = True
-        id = user_f[0]
+    def login_user(self):
+        value = True
+        telegram_id = self[0]
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
-                query = "SELECT uid FROM main ORDER BY uid"
+                query = "SELECT telegram_id FROM users ORDER BY telegram_id"
                 cursor.execute(query)
                 for row in cursor:
-                    if str(id) == str(row['uid']):
-                        znach = False
+                    if str(telegram_id) == str(row['telegram_id']):
+                        value = False
 
-            if znach:
-                with conn.cursor() as cursor:
-                    cursor = conn.cursor()
-                    query = 'INSERT INTO main (uid, uname) VALUES ({0}, "{1}")'.format(
-                    user_f[0], user_f[1])
-                    cursor.execute(query)
-                    conn.commit()
-                    return False
+            if value:
+                query = f'''INSERT INTO 
+                                users (telegram_id, name) 
+                            VALUES 
+                                ({self[0]}, "{self[1]}")'''
+                cursor.execute(query)
+                conn.commit()
+                return False
+
             else:
+                conn.commit()
                 return True
 
-    def p_chanel(id):
+    def channel_check(self):
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
-                query = 'SELECT utgrup, ungrup FROM main WHERE uid = {0}'
-                query = guery.format(id)
+                query = f'''SELECT 
+                                subscriptions, max_groups 
+                            FROM 
+                                users 
+                            WHERE 
+                                telegram_id = {self}'''
+
                 cursor.execute(query)
                 for row in cursor:
-                    mem = [row['utgrup'],row['ungrup']]
+                    mem = [row['subscriptions'], row['max_groups']]
                     return mem
 
-    def add_new_grup(grup):
+    def add_new_group(self):
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
-                znach = True
-                query = "SELECT g_id FROM grup WHERE g_id = {0}"
-                query = query.format(grup['id'])
-                for row in query:
-                    if str(grup['id']) == str(row['g_id']):
-                        znach = False
+                value = True
+                query = f"SELECT group_id FROM groups WHERE group_id = {self['group_id']}"
+                cursor.execute(query)
+                for row in cursor:
+                    if str(self['group_id']) == str(row['group_id']):
+                        value = False
 
-                if znach:
-                    query = """
-                                INSERT INTO grup
-                                    (g_id, g_title, g_username, g_last, g_users)
+                if value:
+                    query = f"""
+                                INSERT INTO groups
+                                    (group_id, , tag, last_news, users)
                                 VALUES
-                                    ({id}, {title}, {username}, {last}, {u_id})
+                                    ({self['group_id']}, {self['tag']}, {self['name']},
+                                    {self['last_numbers']}, {self['telegram_id']})
                             """
-                    query = query.format(**grup)
                     cursor.execute(query)
 
-                    if str(grup['id']) not in prow:
-                        prow = Sqldb.ochstr(str(prow))
-                        prow = (prow + " " + str(grup['id']))
+                    query = f"SELECT groups FROM users WHERE telegram_id = {self['telegram_id']}"
+                    cursor.execute(query)
+                    prow = None
+                    for row in cursor:
+                        prow = row['groups'].split()
+
+                    if str(self['id']) not in prow:
+                        prow = (prow + " " + str(self['id']))
                         if prow is None:
-                            prow = grup['id']
-                        # prow = prow + " " + grup["u_id"]
-                        prow = Sqldb.ochstr(str(prow))
-                        cursor.execute('UPDATE main SET ugroup = ? WHERE uid = ?',(prow,grup['u_id'],))
-                        conn.commit()
+                            prow = self['id']
+
+                        query = f'''UPDATE
+                                        users
+                                    SET 
+                                        groups = {prow} 
+                                    WHERE 
+                                        telegram_id = {self["telegram_id"]}
+                                '''
+                        cursor.execute(query)
+                    conn.commit()
                     return True
+
                 else:
                     with conn:
-                        cursor = conn.cursor()
-                        cursor.execute("SELECT g_users FROM grup WHERE g_id = ?", (grup['id'],))
-                        prow = cursor.fetchall()
+                        query = f"SELECT users FROM groups WHERE group_id = {self['group_id']}"
+                        cursor.execute(query)
+                        check = None
+                        for row in cursor:
+                            check = row['users'].split()
 
-                        prow = Sqldb.och(prow[0])
+                        if str(self['telegram_id']) not in check:
 
-                        if str(grup['u_id']) not in prow:
-                            prow = Sqldb.ochstr(str(prow))
-                            prow = (prow + " " + str(grup['u_id']))
-                            # prow = Sqldb.och(prow[0]
-                            if prow is None:
-                                prow = grup['u_id']
+                            check = (obed(check) + " " + str(self['telegram_id']))
+                            query = f'''UPDATE 
+                                            groups 
+                                        SET 
+                                            users = {check}, 
+                                            g_last = {self['last_numbers']} 
+                                        WHERE 
+                                            group_id = {self['group_id']}
+                                    '''
+                            cursor.execute(query)
 
-                            cursor = conn.cursor()
-                            prow = Sqldb.ochstr(str(prow))
-                            if prow != []:
-                                cursor.execute('UPDATE grup SET g_users = ? WHERE g_id = ?',(prow,grup['id'],))
-                                conn.commit()
-                            else:
-                                cursor.execute('UPDATE grup SET g_users = ?, g_last = ? WHERE g_id = ?',(prow, grip['last'], grup['id'],))
-                                conn.commit()
-                            cursor.execute('SELECT ugroup FROM main WHERE uid = ?',(grup['u_id'],))
+                            query = f'''SELECT
+                                            groups 
+                                        FROM 
+                                            users 
+                                        WHERE 
+                                            telegram_id = {self["telegram_id"]}
+                                    '''
+                            cursor.execute(query)
+                            check = None
+                            for row in cursor:
+                                check = row['groups'].split()
 
-                            prow = cursor.fetchall()
+                            if str(self['group_id']) not in check or str(self['group_id'])+'_p' not in check:
 
-                            prow = Sqldb.och(prow)
+                                check = (obed(check) + " " + str(self['group_id']))
 
-                            if str(grup['id']) not in prow:
-
-                                prow = Sqldb.ochstr(str(prow))
-                                prow = (prow + " " + str(grup['id']))
-
-                                if prow is None:
-                                    prow = grup['id']
-
-                                prow = Sqldb.ochstr(str(prow))
-
-                                cursor.execute('UPDATE main SET ugroup = ? WHERE uid = ?',(prow,grup['u_id'],))
+                                query = f'''
+                                            UPDATE 
+                                                users 
+                                            SET 
+                                                groups = {check} 
+                                            WHERE 
+                                                telegram_id = {self['telegram_id']}
+                                        '''
+                                cursor.execute(query)
                                 conn.commit()
                             return True
                         else:
-                            cursor.close()
                             return False
 
-    def edit_list(param):
-        edit = {'func': param[0],
-                'g_id': param[1],
-                'uid':  param[len(param)-1]}
-        if param[2] == "p":
+    def edit_list(self) :
+        edit = {'func': self[0],
+                'group_id': self[1],
+                'telegram_id': self[-1]
+                }
+        if self[2] == "p":
             edit['pause'] = True
-            edit['q_id_p'] = str(param[1])+'_p'
+            edit['group_id_p'] = str(self[1]) + '_p'
         else:
             edit['pause'] = False
         for_r = 3
@@ -228,27 +254,30 @@ class Sqldb:
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
                 atr = {
-                         'uid': edit['uid'],
-                        'g_id': edit['g_id']
-                        }
+                    'telegram_id': edit['telegram_id'],
+                    'group_id': edit['group_id']
+                }
 
-                query = "SELECT ugroup, utgrup FROM main WHERE uid = {uid}"
-                query = query.format(**edit)
-                cursor.execute(query)
-                for row in cursor:
-                    atr['ugroup'] = row['ugroup']
-                    atr['utgrup'] = row['utgrup']
-
-                query = "SELECT g_users FROM grup WHERE g_id = {g_id}"
-                query = query.format(**edit)
+                query = f'''SELECT 
+                                groups, subscriptions 
+                            FROM 
+                                users 
+                            WHERE 
+                                uid = {self['telegram_id']}
+                        '''
                 cursor.execute(query)
 
                 for row in cursor:
-                    atr['g_users'] = row['g_users']
+                    atr['groups'] = row['groups']
+                    atr['subscriptions'] = row['subscriptions']
 
-                prow = atr['ugroup'].split()
+                query = f"SELECT users FROM groups WHERE g_id = {edit['group_id']}"
+                cursor.execute(query)
 
-                print(atr)
+                for row in cursor:
+                    atr['users'] = row['users']
+
+                prow = atr['groups'].split()
 
                 if edit['g_id'] in prow or edit['g_id'] + '_p' in prow:
 
@@ -256,136 +285,136 @@ class Sqldb:
                     if edit['func'] == "del":
                         # Если канал был на паузе удалить у юзера канал с приставкой "_p"
                         if edit['pause']:
-                            prow.remove(str(edit['g_id'])+"_p")
+                            prow.remove(str(edit['group_id']) + "_p")
                         else:
-                            prow.remove(edit['g_id'])
+                            prow.remove(edit['group_id'])
                         # Уменьшаем текущее количество групп пользователя
-                        atr['uqroup'] = obed(prow)
-                        atr['utgrup'] -= 1
+                        atr['groups'] = obed(prow)
+                        atr['subscriptions'] -= 1
                         for_r = 0
 
                     # Если ставим канал на паузу
                     elif edit['func'] == "pau":
                         for i in range(len(prow)):
-                            if prow[i] == edit['g_id']:
+                            if prow[i] == edit['group_id']:
                                 prow[i] += "_p"
-                        atr['ugroup']  = obed(prow)
+                        atr['groups'] = obed(prow)
                         print(atr)
                         for_r = 1
 
                     elif edit['func'] == "beg":
                         for i in range(len(prow)):
-                            if prow[i] == edit['g_id'] + "_p":
-                                prow[i] = edit['g_id']
-                            atr['ugroup']  = obed(prow)
-                            for_r = [2, edit['g_id']]
+                            if prow[i] == edit['group_id'] + "_p":
+                                prow[i] = edit['group_id']
+                            atr['groups'] = obed(prow)
+                            for_r = [2, edit['group_id']]
 
                     prow = atr['g_users'].split()
                     # Если не запускаем канал, то удаляем юзера из списка подписчиков группы
                     if edit['func'] != "beg":
-                        prow.remove(edit['uid'])
-                        atr['g_users'] = obed(prow)
+                        prow.remove(edit['telegram_id'])
+                        atr['users'] = obed(prow)
                     else:
                         prow.append(edit['uid'])
-                        atr['g_users'] = obed(prow)
+                        atr['users'] = obed(prow)
 
+                    query = f'''UPDATE 
+                                    users 
+                                SET 
+                                    groups = "{atr['groups']}", 
+                                    subscriptions = {atr['subscriptions']} 
+                                WHERE 
+                                    telegram_id = {atr['telegram_id']};'''
 
-                    query = 'UPDATE main SET ugroup = "{ugroup}", utgrup = {utgrup} WHERE uid = {uid};'
-                    query = query.format(**atr)
                     cursor.execute(query)
 
-                    query = 'UPDATE grup SET g_users = "{g_users}" WHERE g_id = {g_id}'
-                    query = query.format(**atr)
+                    query = f'''UPDATE 
+                                    groups 
+                                SET 
+                                    users = "{atr["users"]}" 
+                                WHERE 
+                                    group_id = {atr["group_id"]}
+                                '''
                     conn.commit()
                     cursor.execute(query)
 
         return for_r
 
-    def add_ref(inviter):
+    def add_ref(self):
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
-                query = 'SELECT refers FROM main WHERE uid = {0}'.format(inviter)
+                query = f'SELECT refers FROM users WHERE telegram_id = {self}'
                 cursor.execute(query)
                 inv = None
                 for row in cursor:
                     inv = row['refers'] + 1
 
-                query = 'UPDATE main SET refers = {0} WHERE uid = {1}'.format(inv,inviter)
+                query = f'UPDATE users SET refers = {inv} WHERE telegram_id = {self};'
                 cursor.execute(query)
-                conn.commit()
 
-                if inv%2 == 0 and inv != 0:
-                    guery = 'SELECT ungrup FROM main WHERE uid = ?'.format(inviter)
+                if inv % 2 == 0 and inv != 0:
+                    query = f'SELECT max_groups FROM users WHERE telegram_id = {self}'
                     cursor.execute(query)
-                    grup = None
+                    group = None
                     for row in cursor:
-                        grup = row['ungrup'] + 1
-                    query = 'UPDATE main SET ungrup = ? WHERE uid = ?'.format(grup, inviter)
+                        group = row['max_groups'] + 1
+                    query = f'UPDATE users SET max_groups = {group} WHERE telegram_id = {self}'
                     cursor.execute(query)
+                    conn.commit()
                     return True
                 else:
                     return False
 
-    def block(title):
-        with closing(connect()) as connection:
-            with connection.cursor() as cursor:
-                query = "UPDATE grup SET g_role = -1 WHERE g_username = {0}"
-                query = query.format(title)
+    def block(self):
+        with closing(connect()) as conn:
+            print(self)
+            with conn.cursor() as cursor:
+                query = f"UPDATE groups SET status = -1 WHERE tag = '{self}'"
                 cursor.execute(query)
                 conn.commit()
 
-
-    def get_grup(id):
+    def get_group(self):
         with closing(connect()) as connection:
             with connection.cursor() as cursor:
-                grup = None
-                query = 'SELECT ugroup FROM main WHERE uid = {0}'.format(id)
+                query = f'''SELECT
+                                groups 
+                            FROM 
+                                users 
+                            WHERE 
+                                telegram_id = {self}
+                            '''
                 cursor.execute(query)
                 for row in cursor:
-                    grup = row['ugroup']
-                return grup
+                    return row['groups']
 
+    @staticmethod
     def get_user():
         with closing(connect()) as connection:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT uid FROM main WHERE uakt = 1")
+                cursor.execute("SELECT telegram_id FROM users WHERE status = 1")
                 for row in cursor:
-                    return row['uid']
+                    return row['telegram_id']
 
-    def grup_plus(id):
-        with closing(connect()) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT utgrup FROM main WHERE uid = {0}".format(id))
+    def group_plus(self):
+        with closing(connect()) as conn:
+            with conn.cursor() as cursor:
+                query = f'SELECT subscriptions FROM users WHERE telegram_id = {self}'
+                cursor.execute(query.format(self))
                 for row in cursor:
-                    query = 'UPDATE main SET utgrup ={} WHERE uid = {}'.format(row['utgrup']+1,id)
+                    query = f'''UPDATE
+                                    users 
+                                SET 
+                                    subscriptions ={row["subscriptions"]+1} 
+                                WHERE 
+                                    telegram_id = {self}
+                            '''
                     cursor.execute(query)
                     conn.commit()
                 return True
 
-    def block_user(id):
-        with closing(connect()) as connection:
-            with connection.cursor() as cursor:
-                query = 'UPDATE main SET uakt = -1 WHERE uid = {0}'.format(id)
+    def block_user(self):
+        with closing(connect()) as conn:
+            with conn.cursor() as cursor:
+                query = f'UPDATE users SET status = -1 WHERE telegram_id = {self}'
                 cursor.execute(query)
                 conn.commit()
-
-
-
-    def och(prow):
-        for och in prow:
-            prow = re.sub(r"[\[\](,)']","",str(prow))
-            prow = prow.split()
-        if not prow:
-            prow = []
-        return prow
-
-    def all_och(par):
-        if len(par) == 1:
-            par = Sqldb.och(par[0])
-        par = Sqldb.ochstr(par)
-        return par
-
-
-    def ochstr(prow):
-        prow = re.sub(r"[\[\](,)']","",str(prow))
-        return prow

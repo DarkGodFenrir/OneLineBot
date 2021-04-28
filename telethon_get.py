@@ -15,9 +15,10 @@ from telethon.tl.types import ChannelParticipantsSearch
 
 from telethon.tl.functions.messages import GetHistoryRequest
 
-api_id   = param.API_ID
+api_id = param.API_ID
 api_hash = param.API_HASH
 username = param.USERNAME
+
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
@@ -27,32 +28,32 @@ class DateTimeEncoder(json.JSONEncoder):
             return list(o)
         return json.JSONEncoder.default(self, o)
 
+
 class Tele:
 
     async def get_last_news(param, client):
         try:
-            print(param)
-            channel = '@' + param['title']
+            channel = '@' + param['tag']
 
-            offset_msg = 0    # номер записи, с которой начинается считывание
-            limit_msg = 100   # максимальное число записей, передаваемых за один раз
+            offset_msg = 0  # номер записи, с которой начинается считывание
+            limit_msg = 100  # максимальное число записей, передаваемых за один раз
             messages = []
 
-            last_id = param['last_news']
-            all_messages = []   # список всех сообщений
+            last_id = param['last_number']
+            all_messages = []  # список всех сообщений
             total_messages = 0
             total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
 
             while True:
                 history = await client(GetHistoryRequest(
-                peer = channel,
-                offset_id=offset_msg,
-                offset_date=None,
-                add_offset=0,
-                limit=limit_msg,
-                max_id=0,
-                min_id=last_id,
-                hash=0
+                    peer=channel,
+                    offset_id=offset_msg,
+                    offset_date=None,
+                    add_offset=0,
+                    limit=limit_msg,
+                    max_id=0,
+                    min_id=last_id,
+                    hash=0
                 ))
 
                 if not history.messages:
@@ -74,41 +75,40 @@ class Tele:
 
             per_messages = []
             for i in range(len(all_messages)):
-                per_messages.append(all_messages[(len(all_messages)-1)-i])
+                per_messages.append(all_messages[(len(all_messages) - 1) - i])
             return per_messages
         except:
             print(sys.exc_info())
-            Sqldb.block(param['title'])
+            Sqldb.block(param['tag'])
             return []
 
-
-        #with open('channel_messages.json', 'w', encoding='utf8') as outfile:
+        # with open('channel_messages.json', 'w', encoding='utf8') as outfile:
         #    json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
 
     async def get_for_reg_grup(message, client):
         try:
             channel = message.text
 
-            offset_msg = 0    # номер записи, с которой начинается считывание
+            offset_msg = 0  # номер записи, с которой начинается считывание
             limit_msg = 1  # максимальное число записей, передаваемых за один раз
 
-            all_messages = []   # список всех сообщений
+            all_messages = []  # список всех сообщений
             total_messages = 0
-            total_count_limit = 1 # поменяйте это значение, если вам нужны не все сообщения
+            total_count_limit = 1  # поменяйте это значение, если вам нужны не все сообщения
 
             messages = []
             chats = []
 
             while True:
                 history = await client(GetHistoryRequest(
-                peer = channel,
-                offset_id=offset_msg,
-                offset_date=None,
-                add_offset=0,
-                limit=limit_msg,
-                max_id=0,
-                min_id=0,
-                hash=0
+                    peer=channel,
+                    offset_id=offset_msg,
+                    offset_date=None,
+                    add_offset=0,
+                    limit=limit_msg,
+                    max_id=0,
+                    min_id=0,
+                    hash=0
                 ))
 
                 if not history.messages:
@@ -126,11 +126,11 @@ class Tele:
                 if total_count_limit != 0 and total_messages >= total_count_limit:
                     break
 
-            grup = {'id':chats[0].id,'title':chats[0].title,
-            'username':chats[0].username,'last':messages[0].id,
-            'u_id':message.chat.id,'u_username':message.chat.username}
+            group = {'group_id': chats[0].id, 'name': chats[0].title,
+                     'tag': chats[0].username, 'last_number': messages[0].id,
+                     'telegram_id': message.chat.id, 'user_name': message.chat.username}
 
-            add_q_sql = Sqldb.add_new_grup(grup)
+            add_q_sql = Sqldb.add_new_group(group)
 
             if add_q_sql is True:
                 return 1
@@ -141,8 +141,8 @@ class Tele:
 
     async def main(param):
         client = TelegramClient(username,
-        api_id,
-        api_hash)
+                                api_id,
+                                api_hash)
         await client.start()
         messages = await Tele.get_last_news(param, client)
         await client.disconnect()
@@ -150,25 +150,20 @@ class Tele:
 
     async def reg_grup(message):
         client = TelegramClient(username,
-        api_id,
-        api_hash)
+                                api_id,
+                                api_hash)
         await client.start()
         result = await Tele.get_for_reg_grup(message, client)
         await client.disconnect()
 
         return result
 
+# 1)современные сети и их защита SDN механизмы защиты из SPG
+# 2)Беспроводные сети 5G, 6G механизмы защиты
 
+# Технологии и системы
+# 1)Техногия облочного вычисления и их защита
+# 2)Система распределенного реестра (Blockchain)
 
-
-
-
-#1)современные сети и их защита SDN механизмы защиты из SPG
-#2)Беспроводные сети 5G, 6G механизмы защиты
-
-#Технологии и системы
-#1)Техногия облочного вычисления и их защита
-#2)Система распределенного реестра (Blockchain)
-
-#1)Принцыпы построения и защита и средства защиты DB2
-#2) --//-- Oracle (!!!!)
+# 1)Принцыпы построения и защита и средства защиты DB2
+# 2) --//-- Oracle (!!!!)

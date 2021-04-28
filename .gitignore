@@ -1,4 +1,5 @@
 Maxidik.session
 Maxidik.session-journal
 *.db
+mysql.db
 param.py
