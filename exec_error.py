@@ -19,6 +19,7 @@ def block_user(param):
 
 
 def exec_error(self, param):
+    print(param)
     if str(self.args[0]).find('bot was blocked by the user') > -1:
         block_user(param)
     if str(self.args[0]).find('chat not found'):

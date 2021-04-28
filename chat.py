@@ -6,7 +6,6 @@ import time
 import schedule
 
 import exec_error
-# from sqlline import *
 from keys import *
 from mysql import *
 from telethon_get import *
@@ -84,14 +83,14 @@ def function_to_run():
 
 def info_print():
     global num_messages
-    time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(time + ": Отправленно", num_messages, "постов")
+    info_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(info_time + ": Отправленно", num_messages, "постов")
     num_messages = 0
 
 
-def reclam():
-    time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(time + ": время рекламы")
+def advertising():
+    ad_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(ad_time + ": время рекламы")
     user = Sqldb.get_user().split()
     print(user)
     # for us in user:
@@ -110,11 +109,11 @@ def start_message(message):
         if len(message.text.split()) > 1 and int(message.text.split()[1]) > 0:
             check = Sqldb.add_ref(message.text.split()[1])
             if check:
-                text = "Была использована ваша реферальная ссылка, максимальное число каналов увеличено"
-                bot.send_message(message.text.split()[1], text)
+                use_referral_text = "Была использована ваша реферальная ссылка, максимальное число каналов увеличено"
+                bot.send_message(message.text.split()[1], use_referral_text)
             else:
-                text = "Была использована ваша реферальная ссылка. Рефералов до слота 1/2"
-                bot.send_message(message.text.split()[1], text)
+                use_referral_text = "Была использована ваша реферальная ссылка. Рефералов до слота 1/2"
+                bot.send_message(message.text.split()[1], use_referral_text)
         bot.send_message(message.chat.id, 'Доброго времени суток, этот бот'
                                           ' создан для того, чтобы обьединить информацию из нескольких групп.',
                          reply_markup=key)
@@ -129,32 +128,32 @@ def get_message(message):
             bot.send_message(message.chat.id, "У вас сейчас %s из %s каналов,"
                                               " чтобы добавить новый, ведите ссылку на канал:" %
                              (prov[0], prov[1]))
-            bot.register_next_step_handler(message, addchanel)
+            bot.register_next_step_handler(message, add_channel)
         else:
             key = Keys.main_keys()
             bot.send_message(message.chat.id, "У вас сайчас максимальное"
                                               " количество каналов", reply_markup=key)
 
     elif message.text == "🔖Список каналов":
-        grup_g = Sqldb.get_group(message.chat.id)
-        if grup_g != None and grup_g != "None":
-            grup_g = grup_g.split()
-            if "None" in grup_g:
-                grup_g.remove("None")
-            if "None_p" in grup_g:
-                grup_g.remove("None_p")
-            grup_list = []
-            for grup in grup_g:
-                paramet = Sqldb.get_group_param(grup)
-                if paramet['g_id'] == "":
-                    paramet['nazv'] = "Канал удален"
-                    paramet['g_id'] = grup
-                grup_list.append(paramet)
+        group_g = Sqldb.get_group(message.chat.id)
+        if group_g is not None and group_g != "None":
+            group_g = group_g.split()
+            if "None" in group_g:
+                group_g.remove("None")
+            if "None_p" in group_g:
+                group_g.remove("None_p")
+            group_list = []
+            for group in group_g:
+                parameter = Sqldb.get_group_param(group)
+                if parameter['group_id'] == "":
+                    parameter['name'] = "Канал удален"
+                    parameter['group_id'] = group
+                group_list.append(parameter)
             print("====", message.chat.username, sep="\n", end=": \n")
-            for grup in grup_list:
-                print(grup['title'], grup['nazv'], sep="/")
+            for group in group_list:
+                print(group['tag'], group['name'], sep="/")
             print('====')
-            key = Keys.grup_list_keys(grup_list, message.chat.id)
+            key = Keys.group_list_keys(group_list, message.chat.id)
             bot.send_message(message.chat.id, "Ваш список каналов: ",
                              reply_markup=key)
         else:
@@ -164,18 +163,20 @@ def get_message(message):
 
     elif message.text == "⭕️Помощь":
         key = Keys.main_keys()
-        text = "Данный бот создан для объединения новостей из разных групп в одну новостную линию. \nПо всем имеющимся вопросам обращаться - @Maxidik"
-        bot.send_message(message.chat.id, text, reply_markup=key)
+        referral_text = "Данный бот создан для объединения новостей из разных групп в одну новостную линию. \nПо всем " \
+                        "имеющимся вопросам обращаться - @Maxidik "
+        bot.send_message(message.chat.id, referral_text, reply_markup=key)
     elif message.text == "👤Личный кабинет":
         key = Keys.main_keys()
-        paramet = Sqldb.get_us_param(message.chat.id)
-        dop = int(paramet['refers']) % 2
+        parameter = Sqldb.get_us_param(message.chat.id)
+        dop = int(parameter['refers']) % 2
         if dop == 0:
             dop = 2
-        refurl = "http://t.me/" + param.BOT_NAME + "?start=" + str(message.chat.id)
-        text = "Рефералов: %s \nРефералов до получения слота группы: %s \nВаша реферальная ссылка: \n%s \nБаланс: %s" % (
-            paramet['refers'], dop, refurl, paramet['balans'])
-        bot.send_message(message.chat.id, text, reply_markup=key)
+        ref_url = "http://t.me/" + param.BOT_NAME + "?start=" + str(message.chat.id)
+        referral_text = "Рефералов: %s \nРефералов до получения слота группы: %s \nВаша реферальная ссылка: \n%s " \
+                        "\nБаланс: %s" % (
+                            parameter['refers'], dop, ref_url, parameter['balance'])
+        bot.send_message(message.chat.id, referral_text, reply_markup=key)
     elif message.text == "-q":
         if str(message.chat.id) == str(param.AUTHOR_ID):
             print('Можно остановить')
@@ -187,7 +188,7 @@ def get_message(message):
         bot.send_message(message.chat.id, "Команда неизвестна или находится в разработке")
 
 
-def addchanel(message):
+def add_channel(message):
     result = asyncio.run(Tele.reg_grup(message))
 
     if result == 1:
@@ -202,7 +203,7 @@ def addchanel(message):
 
 
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('del_'))
-def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
+def process_callback_dell_group(callback_query: telebot.types.CallbackQuery):
     # code = callback_query.data[-1]
     info = re.split("[_]", str(callback_query.data))
     rez = Sqldb.edit_list(info)
@@ -214,7 +215,7 @@ def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
 
 
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('pau_'))
-def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
+def process_callback_dell_group(callback_query: telebot.types.CallbackQuery):
     # code = callback_query.data[-1]
     info = re.split("[_]", str(callback_query.data))
     print(info)
@@ -227,7 +228,7 @@ def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
 
 
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('beg_'))
-def process_callback_delgru_del(callback_query: telebot.types.CallbackQuery):
+def process_callback_dell_group(callback_query: telebot.types.CallbackQuery):
     # code = callback_query.data[-1]
     info = re.split("[_]", str(callback_query.data))
     print(info)
@@ -250,9 +251,9 @@ if __name__ == "__main__":
     schedule.every(15).seconds.do(function_to_run)
     schedule.every(1).minutes.do(function_to_run)
     schedule.every(1).hour.do(info_print)
-    schedule.every().day.at("12:00").do(reclam)
-    schedule.every().day.at("15:00").do(reclam)
-    schedule.every().day.at("18:00").do(reclam)
+    schedule.every().day.at("12:00").do(advertising)
+    schedule.every().day.at("15:00").do(advertising)
+    schedule.every().day.at("18:00").do(advertising)
     t = threading.Thread(target=send_message)
     t.start()
     global exit

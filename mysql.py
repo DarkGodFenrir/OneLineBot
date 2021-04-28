@@ -118,18 +118,18 @@ class Sqldb:
                     if str(telegram_id) == str(row['telegram_id']):
                         value = False
 
-            if value:
-                query = f'''INSERT INTO 
-                                users (telegram_id, name) 
-                            VALUES 
-                                ({self[0]}, "{self[1]}")'''
-                cursor.execute(query)
-                conn.commit()
-                return False
+                if value:
+                    query = f'''INSERT INTO 
+                                    users (telegram_id, name) 
+                                VALUES 
+                                    ({self[0]}, "{self[1]}")'''
+                    cursor.execute(query)
+                    conn.commit()
+                    return False
 
-            else:
-                conn.commit()
-                return True
+                else:
+                    conn.commit()
+                    return True
 
     def channel_check(self):
         with closing(connect()) as conn:
@@ -148,6 +148,7 @@ class Sqldb:
 
     def add_new_group(self):
         with closing(connect()) as conn:
+            print(self)
             with conn.cursor() as cursor:
                 value = True
                 query = f"SELECT group_id FROM groups WHERE group_id = {self['group_id']}"
@@ -224,6 +225,7 @@ class Sqldb:
                             if str(self['group_id']) not in check or str(self['group_id'])+'_p' not in check:
 
                                 check = (obed(check) + " " + str(self['group_id']))
+                                print(self)
 
                                 query = f'''
                                             UPDATE 
@@ -239,10 +241,12 @@ class Sqldb:
                         else:
                             return False
 
-    def edit_list(self) :
+    def edit_list(self):
+
+        print(self)
         edit = {'func': self[0],
                 'group_id': self[1],
-                'telegram_id': self[-1]
+                'telegram_id': int(self[-1])
                 }
         if self[2] == "p":
             edit['pause'] = True
@@ -259,11 +263,11 @@ class Sqldb:
                 }
 
                 query = f'''SELECT 
-                                groups, subscriptions 
+                                groups, subscriptions
                             FROM 
                                 users 
                             WHERE 
-                                uid = {self['telegram_id']}
+                                telegram_id = {edit['telegram_id']}
                         '''
                 cursor.execute(query)
 
@@ -271,15 +275,16 @@ class Sqldb:
                     atr['groups'] = row['groups']
                     atr['subscriptions'] = row['subscriptions']
 
-                query = f"SELECT users FROM groups WHERE g_id = {edit['group_id']}"
+                query = f"SELECT users, tag FROM groups WHERE group_id = {edit['group_id']}"
                 cursor.execute(query)
 
                 for row in cursor:
                     atr['users'] = row['users']
+                    atr['tag'] = row['tag']
 
                 prow = atr['groups'].split()
 
-                if edit['g_id'] in prow or edit['g_id'] + '_p' in prow:
+                if edit['group_id'] in prow or edit['group_id'] + '_p' in prow:
 
                     # Если удаление канала
                     if edit['func'] == "del":
@@ -303,19 +308,25 @@ class Sqldb:
                         for_r = 1
 
                     elif edit['func'] == "beg":
+                        check = prow
                         for i in range(len(prow)):
                             if prow[i] == edit['group_id'] + "_p":
                                 prow[i] = edit['group_id']
                             atr['groups'] = obed(prow)
-                            for_r = [2, edit['group_id']]
+                            for_r = {"num": 2, "tag": atr['tag']}
+                            if check:
+                                for_r["flag"] = True
+                            else:
+                                for_r["flag"] = False
 
-                    prow = atr['g_users'].split()
+                    prow = atr['users'].split()
                     # Если не запускаем канал, то удаляем юзера из списка подписчиков группы
                     if edit['func'] != "beg":
-                        prow.remove(edit['telegram_id'])
+                        if str(edit['telegram_id']) in prow:
+                            prow.remove(str(edit['telegram_id']))
                         atr['users'] = obed(prow)
                     else:
-                        prow.append(edit['uid'])
+                        prow.append(str(edit['telegram_id']))
                         atr['users'] = obed(prow)
 
                     query = f'''UPDATE 

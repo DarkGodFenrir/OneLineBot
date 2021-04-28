@@ -85,7 +85,7 @@ class Tele:
         # with open('channel_messages.json', 'w', encoding='utf8') as outfile:
         #    json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
 
-    async def get_for_reg_grup(message, client):
+    async def get_for_reg_group(message, client):
         try:
             channel = message.text
 
@@ -153,7 +153,7 @@ class Tele:
                                 api_id,
                                 api_hash)
         await client.start()
-        result = await Tele.get_for_reg_grup(message, client)
+        result = await Tele.get_for_reg_group(message, client)
         await client.disconnect()
 
         return result
