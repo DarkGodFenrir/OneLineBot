@@ -1,4 +1,5 @@
 # This Python file uses the following encoding: utf-8
+import asyncio
 import re
 import threading
 import time
@@ -11,7 +12,6 @@ from mysql import *
 from telethon_get import *
 
 bot = telebot.TeleBot(param.TOKEN)
-
 
 def send_message():
     t = threading.currentThread()
@@ -28,57 +28,16 @@ def function_to_run():
         if len(param_g['tag']) > 0:
             messages = asyncio.run(Tele.main(param_g))
 
-        if len(messages) > 0:
-            try:
-                for mess in messages:
-                    global group_id
-                    if str(mess['grouped_id']) == "None" or str(mess['grouped_id']) != str(group_id):
-
-                        link_group_m = "https://t.me/" + str(param_g['tag']) + "/" + str(mess['id'])
-                        link_group = "https://t.me/" + str(param_g['tag']) + "/"
-                        media = mess['media']
-
-                        if media is not None:
-                            for user in param_g['users'].split():
-                                try:
-                                    if media['_'] == 'MessageMediaWebPage':
-                                        url = media['webpage']
-                                        url = url['url']
-                                        sock = '<a href = "' + str(url) + '">' + '|' + "</a>"
-                                        sock = str(sock) + '<a href = "' + str(link_group_m) + '">' + str(
-                                            param_g["name"]) + "</a>"
-                                        message_text = str(sock) + '\n\n' + str(mess['message'])
-                                        bot.send_message(int(user), message_text, parse_mode='HTML')
-                                    else:
-                                        sock = '<a href = "' + str(link_group_m) + '">' + str(param_g["name"]) + "</a>"
-                                        message_text = str(sock) + '\n\n' + str(mess['message'])
-                                        bot.send_message(int(user), message_text, parse_mode='HTML')
-                                except:
-                                    error = sys.exc_info()[1]
-                                    error_text = exec_error.exec_error(error, user)
-                                    bot.send_message(param.AUTHOR_ID, error_text)
-                        else:
-                            for user in param_g['users'].split():
-                                try:
-                                    sock = '<a href = "' + str(link_group) + '">' + str(param_g["name"]) + "</a>"
-                                    bot.send_message(int(user), str(sock) + "\n\n" + str(mess['message']),
-                                                     parse_mode='HTML', disable_web_page_preview=True)
-                                except:
-                                    error = sys.exc_info()[1]
-                                    error_text = exec_error.exec_error(error, user)
-                                    bot.send_message(param.AUTHOR_ID, error_text)
-
-                        if 'grouped_id' in mess:
-                            group_id = mess['grouped_id']
-                    else:
-                        continue
-                if len(messages) > 0:
-                    global num_messages
-                    num_messages += len(messages)
-            except:
-                error = sys.exc_info()[1]
-                error_text = exec_error.exec_error(error, user)
-                bot.send_message(param.AUTHOR_ID, error_text)
+        if messages:
+            global num_messages
+            for number in messages:
+                for user in Sqldb.get_users(param_g['group_id']):
+                    try:
+                        bot.forward_message(user, -1001487429647, number)
+                    except:
+                        error = sys.exc_info()[1]
+                        exec_error.exec_error(error, user)
+            num_messages = num_messages + len(messages)
 
 
 def info_print():
@@ -91,7 +50,7 @@ def info_print():
 def advertising():
     ad_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     print(ad_time + ": время рекламы")
-    user = Sqldb.get_user().split()
+    user = Sqldb.get_user()
     print(user)
     # for us in user:
     #     bot.send_message(us,"Здесь могла бы быть ваша реклама\nВсе вопросы: @Maxidik")
@@ -137,23 +96,12 @@ def get_message(message):
     elif message.text == "🔖Список каналов":
         group_g = Sqldb.get_group(message.chat.id)
         if group_g is not None and group_g != "None":
-            group_g = group_g.split()
-            if "None" in group_g:
-                group_g.remove("None")
-            if "None_p" in group_g:
-                group_g.remove("None_p")
-            group_list = []
-            for group in group_g:
-                parameter = Sqldb.get_group_param(group)
-                if parameter['group_id'] == "":
-                    parameter['name'] = "Канал удален"
-                    parameter['group_id'] = group
-                group_list.append(parameter)
+            print(group_g)
             print("====", message.chat.username, sep="\n", end=": \n")
-            for group in group_list:
+            for group in group_g:
                 print(group['tag'], group['name'], sep="/")
             print('====')
-            key = Keys.group_list_keys(group_list, message.chat.id)
+            key = Keys.group_list_keys(group_g, message.chat.id)
             bot.send_message(message.chat.id, "Ваш список каналов: ",
                              reply_markup=key)
         else:
@@ -189,7 +137,7 @@ def get_message(message):
 
 
 def add_channel(message):
-    result = asyncio.run(Tele.reg_grup(message))
+    result = asyncio.run(Tele.reg_group(message))
 
     if result == 1:
         Sqldb.group_plus(message.chat.id)
@@ -206,8 +154,8 @@ def add_channel(message):
 def process_callback_dell_group(callback_query: telebot.types.CallbackQuery):
     # code = callback_query.data[-1]
     info = re.split("[_]", str(callback_query.data))
-    rez = Sqldb.edit_list(info)
-    if rez == 0:
+
+    if Sqldb.edit_list(info) == 0:
         bot.send_message(callback_query.from_user.id, "Канал успешно удален")
     else:
         print("Ошибка изменения листа")
@@ -218,9 +166,8 @@ def process_callback_dell_group(callback_query: telebot.types.CallbackQuery):
 def process_callback_dell_group(callback_query: telebot.types.CallbackQuery):
     # code = callback_query.data[-1]
     info = re.split("[_]", str(callback_query.data))
-    print(info)
-    rez = Sqldb.edit_list(info)
-    if rez == 1:
+
+    if Sqldb.edit_list(info) == 1:
         bot.send_message(callback_query.from_user.id, "Канал успешно поставлен на паузу")
     else:
         print("Ошибка изменения листа")
@@ -231,7 +178,7 @@ def process_callback_dell_group(callback_query: telebot.types.CallbackQuery):
 def process_callback_dell_group(callback_query: telebot.types.CallbackQuery):
     # code = callback_query.data[-1]
     info = re.split("[_]", str(callback_query.data))
-    print(info)
+
     rez = Sqldb.edit_list(info)
     if rez['num'] == 2:
         if rez['flag']:

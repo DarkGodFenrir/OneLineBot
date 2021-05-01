@@ -16,20 +16,20 @@ class Keys:
         return markup
 
     def group_list_keys(self, telegram_id):
-        markup = types.InlineKeyboardMarkup()
+        markup = types.InlineKeyboardMarkup(row_width=2)
 
         for i in range(len(self)):
             param = self[i]
             button1 = types.InlineKeyboardButton(text=param['name'],
-                                                 url="https://t.me/%s" % param['tag'])
-            if str(param['group_id']).find("_p") > -1:
-                button2 = types.InlineKeyboardButton(text='▶️',
-                                                     callback_data='beg_%s_%s' % (param['group_id'], telegram_id))
-            else:
+                                                 url=f"https://t.me/{param['tag']}")
+            if param['paused'] == 0:
                 button2 = types.InlineKeyboardButton(text='⏸',
-                                                     callback_data='pau_%s_%s' % (param['group_id'], telegram_id))
+                                                     callback_data=f'pau_{param["group_id"]}_{telegram_id}')
+            else:
+                button2 = types.InlineKeyboardButton(text='▶️',
+                                                     callback_data=f'beg_{param["group_id"]}_{telegram_id}')
             button3 = types.InlineKeyboardButton(text='🗑',
-                                                 callback_data='del_%s_%s' % (param['group_id'], telegram_id))
+                                                 callback_data=f'del_{param["group_id"]}_{telegram_id}')
             markup.row(button1, button2, button3)
 
         return markup

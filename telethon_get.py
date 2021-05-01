@@ -1,19 +1,15 @@
-from telethon.sync import TelegramClient
-from telethon import connection, functions, types, sync
-import sys
-import param
 import json
-import asyncio
-from mysql import *
-# from sqlline import *
+import sys
+import exec_error
+from datetime import datetime
 
-
-from datetime import date, datetime
-
-from telethon.tl.functions.channels import GetParticipantsRequest
-from telethon.tl.types import ChannelParticipantsSearch
-
+from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetHistoryRequest
+
+import param
+from mysql import *
+
+# from sqlline import *
 
 api_id = param.API_ID
 api_hash = param.API_HASH
@@ -130,13 +126,13 @@ class Tele:
                      'tag': chats[0].username, 'last_number': messages[0].id,
                      'telegram_id': message.chat.id, 'user_name': message.chat.username}
 
-            add_q_sql = Sqldb.add_new_group(group)
-
-            if add_q_sql is True:
+            if Sqldb.add_new_group(group):
                 return 1
             else:
                 return 2
         except:
+            error = sys.exc_info()[1]
+            exec_error.exec_error(error, [])
             return 3
 
     async def main(param):
@@ -144,11 +140,23 @@ class Tele:
                                 api_id,
                                 api_hash)
         await client.start()
-        messages = await Tele.get_last_news(param, client)
-        await client.disconnect()
-        return messages
 
-    async def reg_grup(message):
+        messages = await Tele.get_last_news(param, client)
+        for mess in messages:
+            channel_id = mess['peer_id']
+            await client.forward_messages(-1001487429647, mess['id'], channel_id['channel_id'])
+
+        mem = []
+        number = get_number()
+        for i in range(len(messages)):
+            mem.append(number + i + 1)
+        if mem:
+            edit_memory_number(mem[-1])
+
+        await client.disconnect()
+        return mem
+
+    async def reg_group(message):
         client = TelegramClient(username,
                                 api_id,
                                 api_hash)

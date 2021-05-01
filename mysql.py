@@ -26,18 +26,56 @@ def get_max_group():
     with closing(connect()) as connection:
         with connection.cursor() as cursor:
             cursor.execute("""
-                                SELECT
-                                    self_id
-                                FROM
-                                    groups
-                                WHERE
-                                    status != -1
-                                AND
-                                    users != ''
+                            SELECT 
+                                g.self_id 
+                            FROM 
+                                user_group AS ug
+                            LEFT JOIN 
+                                `groups` AS g 
+                            ON 
+                                ug.group_id  = g.group_id 
+                            LEFT JOIN 
+                                users AS u 
+                            ON 
+                                ug.telegram_id = u.telegram_id 
+                            WHERE 
+                                u.status = 1 
+                                    AND 
+                                ug.paused = 0 
+                                    AND 
+                                g.status = 0
+                            GROUP  BY g.group_id 
                                 """)
             for row in cursor:
                 prow.append(row['self_id'])
             return prow
+
+
+def get_number():
+    with closing(connect()) as conn:
+        with conn.cursor() as cursor:
+            query = '''
+            SELECT
+                news_number
+            FROM
+                memory
+                    '''
+            cursor.execute(query)
+            for row in cursor:
+                return row['news_number']
+
+
+def edit_memory_number(self):
+    with closing(connect()) as conn:
+        with conn.cursor() as cursor:
+            query = f'''
+                    UPDATE
+                        memory
+                    SET
+                        news_number = {self} 
+                    '''
+            cursor.execute(query)
+            conn.commit()
 
 
 class Sqldb:
@@ -55,12 +93,33 @@ class Sqldb:
                 cursor.execute(query)
                 conn.commit()
 
+    def get_users(self):
+        with closing(connect()) as conn:
+            with conn.cursor() as cursor:
+                query = f'''
+                        SELECT 
+                            ug.telegram_id 
+                        FROM 
+                            user_group AS ug
+                        LEFT JOIN users AS u
+                        ON ug.telegram_id = u.telegram_id 
+                        WHERE 
+                            ug.group_id = {self} AND 
+                            ug.paused = 0 AND 
+                            u.status != -1
+                        '''
+                cursor.execute(query)
+                mem = []
+                for row in cursor:
+                    mem.append(row['telegram_id'])
+            return mem
+
     def get_param(self):
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
                 query = f'''SELECT 
-                                tag, 
-                                users, 
+                                tag,
+                                group_id,  
                                 last_number, 
                                 name 
                             FROM 
@@ -147,208 +206,175 @@ class Sqldb:
                     return mem
 
     def add_new_group(self):
+        print(self)
         with closing(connect()) as conn:
-            print(self)
             with conn.cursor() as cursor:
-                value = True
-                query = f"SELECT group_id FROM groups WHERE group_id = {self['group_id']}"
+                query = f'''
+                        SELECT 
+                            *
+                        FROM
+                            groups
+                        WHERE
+                            group_id = {self['group_id']}
+                        '''
                 cursor.execute(query)
+
+                mem = []
                 for row in cursor:
-                    if str(self['group_id']) == str(row['group_id']):
-                        value = False
+                    mem.append(row)
 
-                if value:
-                    query = f"""
-                                INSERT INTO groups
-                                    (group_id, , tag, last_news, users)
-                                VALUES
-                                    ({self['group_id']}, {self['tag']}, {self['name']},
-                                    {self['last_numbers']}, {self['telegram_id']})
-                            """
+                print(mem)
+                if mem:
+                    query = f'''
+                            SELECT
+                                paused
+                            FROM
+                                user_group 
+                            WHERE
+                                group_id = {self['group_id']}
+                                    AND
+                                telegram_id = {self['telegram_id']}
+                            '''
                     cursor.execute(query)
 
-                    query = f"SELECT groups FROM users WHERE telegram_id = {self['telegram_id']}"
-                    cursor.execute(query)
-                    prow = None
+                    mem = []
                     for row in cursor:
-                        prow = row['groups'].split()
+                        mem.append(row)
 
-                    if str(self['id']) not in prow:
-                        prow = (prow + " " + str(self['id']))
-                        if prow is None:
-                            prow = self['id']
-
-                        query = f'''UPDATE
-                                        users
-                                    SET 
-                                        groups = {prow} 
-                                    WHERE 
-                                        telegram_id = {self["telegram_id"]}
+                    if not mem:
+                        query = f'''
+                                INSERT INTO
+                                    user_group (telegram_id, group_id)
+                                VALUES
+                                    ({self['telegram_id']}, {self['group_id']}
                                 '''
                         cursor.execute(query)
+                        conn.commit()
+                        return True
+                    else:
+                        return False
+
+                else:
+                    query = f'''
+                                INSERT INTO
+                                    user_group (telegram_id, group_id)
+                                VALUES
+                                    ({self['telegram_id']}, {self['group_id']})
+                            '''
+                    cursor.execute(query)
+
+                    query = f'''
+                                INSERT INTO
+                                    groups (group_id, tag, name, last_number)
+                                VALUES
+                                    ({self['group_id']},'{self['tag']}', '{self['name']}', {self['last_number']})
+                            '''
+
+                    cursor.execute(query)
                     conn.commit()
                     return True
 
-                else:
-                    with conn:
-                        query = f"SELECT users FROM groups WHERE group_id = {self['group_id']}"
-                        cursor.execute(query)
-                        check = None
-                        for row in cursor:
-                            check = row['users'].split()
-
-                        if str(self['telegram_id']) not in check:
-
-                            check = (obed(check) + " " + str(self['telegram_id']))
-                            query = f'''UPDATE 
-                                            groups 
-                                        SET 
-                                            users = {check}, 
-                                            g_last = {self['last_numbers']} 
-                                        WHERE 
-                                            group_id = {self['group_id']}
-                                    '''
-                            cursor.execute(query)
-
-                            query = f'''SELECT
-                                            groups 
-                                        FROM 
-                                            users 
-                                        WHERE 
-                                            telegram_id = {self["telegram_id"]}
-                                    '''
-                            cursor.execute(query)
-                            check = None
-                            for row in cursor:
-                                check = row['groups'].split()
-
-                            if str(self['group_id']) not in check or str(self['group_id'])+'_p' not in check:
-
-                                check = (obed(check) + " " + str(self['group_id']))
-                                print(self)
-
-                                query = f'''
-                                            UPDATE 
-                                                users 
-                                            SET 
-                                                groups = {check} 
-                                            WHERE 
-                                                telegram_id = {self['telegram_id']}
-                                        '''
-                                cursor.execute(query)
-                                conn.commit()
-                            return True
-                        else:
-                            return False
 
     def edit_list(self):
 
         print(self)
         edit = {'func': self[0],
-                'group_id': self[1],
-                'telegram_id': int(self[-1])
+                'group_id': int(self[1]),
+                'telegram_id': int(self[2])
                 }
-        if self[2] == "p":
-            edit['pause'] = True
-            edit['group_id_p'] = str(self[1]) + '_p'
-        else:
-            edit['pause'] = False
         for_r = 3
 
         with closing(connect()) as conn:
             with conn.cursor() as cursor:
-                atr = {
-                    'telegram_id': edit['telegram_id'],
-                    'group_id': edit['group_id']
-                }
+                query = None
 
-                query = f'''SELECT 
-                                groups, subscriptions
-                            FROM 
-                                users 
+                if edit['func'] == 'pau':
+                    query = f'''
+                            UPDATE 
+                                user_group
+                            SET
+                               paused = 1
                             WHERE 
+                                group_id = {edit['group_id']} AND
                                 telegram_id = {edit['telegram_id']}
-                        '''
-                cursor.execute(query)
+                            '''
+                    for_r = 1
 
-                for row in cursor:
-                    atr['groups'] = row['groups']
-                    atr['subscriptions'] = row['subscriptions']
+                elif edit['func'] == 'beg':
+                    for_r = {'num': 2, 'flag': False}
 
-                query = f"SELECT users, tag FROM groups WHERE group_id = {edit['group_id']}"
-                cursor.execute(query)
-
-                for row in cursor:
-                    atr['users'] = row['users']
-                    atr['tag'] = row['tag']
-
-                prow = atr['groups'].split()
-
-                if edit['group_id'] in prow or edit['group_id'] + '_p' in prow:
-
-                    # Если удаление канала
-                    if edit['func'] == "del":
-                        # Если канал был на паузе удалить у юзера канал с приставкой "_p"
-                        if edit['pause']:
-                            prow.remove(str(edit['group_id']) + "_p")
-                        else:
-                            prow.remove(edit['group_id'])
-                        # Уменьшаем текущее количество групп пользователя
-                        atr['groups'] = obed(prow)
-                        atr['subscriptions'] -= 1
-                        for_r = 0
-
-                    # Если ставим канал на паузу
-                    elif edit['func'] == "pau":
-                        for i in range(len(prow)):
-                            if prow[i] == edit['group_id']:
-                                prow[i] += "_p"
-                        atr['groups'] = obed(prow)
-                        print(atr)
-                        for_r = 1
-
-                    elif edit['func'] == "beg":
-                        check = prow
-                        for i in range(len(prow)):
-                            if prow[i] == edit['group_id'] + "_p":
-                                prow[i] = edit['group_id']
-                            atr['groups'] = obed(prow)
-                            for_r = {"num": 2, "tag": atr['tag']}
-                            if check:
-                                for_r["flag"] = True
-                            else:
-                                for_r["flag"] = False
-
-                    prow = atr['users'].split()
-                    # Если не запускаем канал, то удаляем юзера из списка подписчиков группы
-                    if edit['func'] != "beg":
-                        if str(edit['telegram_id']) in prow:
-                            prow.remove(str(edit['telegram_id']))
-                        atr['users'] = obed(prow)
-                    else:
-                        prow.append(str(edit['telegram_id']))
-                        atr['users'] = obed(prow)
-
-                    query = f'''UPDATE 
-                                    users 
-                                SET 
-                                    groups = "{atr['groups']}", 
-                                    subscriptions = {atr['subscriptions']} 
-                                WHERE 
-                                    telegram_id = {atr['telegram_id']};'''
-
+                    query = f'''
+                            SELECT
+                                g.tag, g.last_number, ug.paused
+                            FROM 
+                                user_group AS ug
+                            LEFT JOIN
+                                groups AS g
+                            ON
+                                ug.group_id = g.group_id
+                            WHERE
+                                ug.group_id = {edit['group_id']}
+                            '''
                     cursor.execute(query)
 
-                    query = f'''UPDATE 
-                                    groups 
-                                SET 
-                                    users = "{atr["users"]}" 
-                                WHERE 
-                                    group_id = {atr["group_id"]}
-                                '''
-                    conn.commit()
+                    mem = []
+                    for row in cursor:
+                        edit['last_number'] = row['last_number']
+                        edit['tag'] = row['tag']
+                        if row['paused'] == 0:
+                            mem.append(row)
+
+                    if not mem:
+                        for_r['flag'] = True
+                        for_r['tag'] = edit['tag']
+                        for_r['last_number'] = edit['last_number']
+
+                    query = f'''
+                            UPDATE
+                                user_group
+                            SET
+                                paused = 0
+                            WHERE 
+                                group_id = {edit['group_id']} AND
+                                telegram_id = {edit['telegram_id']}
+                            '''
+
+                elif edit['func'] == 'del':
+                    query = f'''
+                            DELETE FROM 
+                                user_group
+                            WHERE 
+                                group_id = {edit['group_id']} AND
+                                telegram_id = {edit['telegram_id']}
+                            '''
                     cursor.execute(query)
 
+                    query = f'''
+                            SELECT 
+                                subscriptions
+                            FROM
+                                users
+                            WHERE
+                                telegram_id = {edit['telegram_id']}
+                            '''
+                    cursor.execute(query)
+
+                    mem = None
+                    for row in cursor:
+                        mem = row['subscriptions']
+
+                    query = f'''
+                            UPDATE
+                                users
+                            SET
+                                subscriptions = {mem - 1}
+                            WHERE
+                                telegram_id = {edit['telegram_id']}
+                            '''
+                    for_r = 0
+
+                cursor.execute(query)
+                conn.commit()
         return for_r
 
     def add_ref(self):
@@ -387,16 +413,23 @@ class Sqldb:
     def get_group(self):
         with closing(connect()) as connection:
             with connection.cursor() as cursor:
-                query = f'''SELECT
-                                groups 
+                query = f'''SELECT 
+                                g.name, g.tag, 
+                                ug.paused, ug.group_id
                             FROM 
-                                users 
+                                user_group AS ug
+                            LEFT JOIN
+                                groups AS g
+                            ON
+                                ug.group_id = g.group_id
                             WHERE 
-                                telegram_id = {self}
+                                ug.telegram_id = {self}
                             '''
                 cursor.execute(query)
+                memory = []
                 for row in cursor:
-                    return row['groups']
+                    memory.append(row)
+                return memory
 
     @staticmethod
     def get_user():
@@ -415,7 +448,7 @@ class Sqldb:
                     query = f'''UPDATE
                                     users 
                                 SET 
-                                    subscriptions ={row["subscriptions"]+1} 
+                                    subscriptions ={row["subscriptions"] + 1} 
                                 WHERE 
                                     telegram_id = {self}
                             '''
